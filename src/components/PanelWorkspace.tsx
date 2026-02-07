@@ -48,7 +48,7 @@ const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: b
 
 const FUNCTIONS_BY_NUMBER: FunctionId[] = ['WATCH', 'RISK', 'NEWS', 'BEHAV'];
 
-function WatchPanel({ data, security }: { data: Hypothesis[]; security?: string }) {
+function WatchPanel({ data, security, onSelect }: { data: Hypothesis[]; security?: string; onSelect: (symbol: string) => void }) {
   const rows = security ? data.filter((d) => d.symbol === security) : data;
   return (
     <div className="panel-body">
@@ -62,7 +62,11 @@ function WatchPanel({ data, security }: { data: Hypothesis[]; security?: string 
         </thead>
         <tbody>
           {rows.map((item) => (
-            <tr key={item.id} className="bb-row">
+            <tr
+              key={item.id}
+              className="bb-row cursor-pointer hover:bg-[#0f0f0f]"
+              onClick={() => onSelect(item.symbol)}
+            >
               <td className="font-bold text-[var(--bb-amber)]">{item.symbol}</td>
               <td className={item.bias === 'long' ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}>
                 {item.bias.toUpperCase()}
@@ -149,6 +153,7 @@ export function PanelWorkspace({
   const [showMenu, setShowMenu] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
+  const [linked, setLinked] = useState(true);
 
   const cyclePanel = useCallback((dir: 1 | -1) => {
     setActivePanel((p) => {
@@ -177,6 +182,20 @@ export function PanelWorkspace({
     return () => window.removeEventListener('keydown', handler);
   }, [cyclePanel]);
 
+  const pushSecurity = useCallback(
+    (symbol: string, targetPanel: number) => {
+      const normalized = symbol.toUpperCase();
+      setPanels((prev) =>
+        prev.map((p) =>
+          linked || p.id === targetPanel
+            ? { ...p, security: `${normalized}${sector === 'EQUITY' ? '' : `:${sector}`}` }
+            : p
+        )
+      );
+    },
+    [linked, sector]
+  );
+
   const handleSuggestionExecute = (s: Suggestion) => {
     if (s.type === 'function') {
       handleGo(String(s.payload));
@@ -196,6 +215,10 @@ export function PanelWorkspace({
     const updated = [...panels];
     const panel = { ...updated[panelIndex] };
 
+    // link toggle
+    if (tokens.includes('LNK') || tokens.includes('LINK')) setLinked(true);
+    if (tokens.includes('UNL') || tokens.includes('UNLINK')) setLinked(false);
+
     // function mnemonic
     const fn = tokens.find((t) => FUNCTIONS_BY_NUMBER.includes(t as FunctionId));
     if (fn) panel.functionId = fn as FunctionId;
@@ -214,9 +237,11 @@ export function PanelWorkspace({
 
     // security context (simple ticker)
     const tickerToken = tokens.find((t) => /^[A-Z]{1,6}$/.test(t));
-    if (tickerToken) panel.security = `${tickerToken}${sector === 'EQUITY' ? '' : `:${sector}`}`;
+    if (tickerToken) {
+      pushSecurity(tickerToken, panelIndex);
+    }
 
-    updated[panelIndex] = panel;
+    updated[panelIndex] = { ...panel, security: panel.security };
     setPanels(updated);
     setActivePanel(panelIndex);
     setShowMenu(false);
@@ -249,7 +274,7 @@ export function PanelWorkspace({
   const renderPanel = (panel: PanelState) => {
     switch (panel.functionId) {
       case 'WATCH':
-        return <WatchPanel data={watchlist} security={panel.security} />;
+        return <WatchPanel data={watchlist} security={panel.security} onSelect={(s) => pushSecurity(s, panel.id)} />;
       case 'RISK':
         return <RiskPanel riskSummary={riskSummary} equityReturns={equityReturns} equity={equity} />;
       case 'NEWS':
@@ -306,6 +331,13 @@ export function PanelWorkspace({
             <option value="CRYPTO">CRYPTO</option>
             <option value="FX">FX</option>
           </select>
+          <button
+            type="button"
+            className={`bb-button h-8 px-3 ${linked ? '' : 'secondary'}`}
+            onClick={() => setLinked((v) => !v)}
+          >
+            {linked ? 'LINKED' : 'UNLINKED'}
+          </button>
         </div>
         <form
           className="panel-input flex-1"
