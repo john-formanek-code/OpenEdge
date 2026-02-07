@@ -1,10 +1,12 @@
+import Link from "next/link";
 import { getQuotes } from "@/lib/marketData";
 
 type Props = {
   symbols?: string[];
+  view?: string;
 };
 
-export async function LiveQuoteStrip({ symbols = ["SPY", "QQQ", "AAPL", "MSFT", "TSLA", "NVDA"] }: Props) {
+export async function LiveQuoteStrip({ symbols = ["SPY", "QQQ", "AAPL", "MSFT", "TSLA", "NVDA"], view }: Props) {
   const quotes = await getQuotes(symbols);
 
   return (
@@ -14,8 +16,12 @@ export async function LiveQuoteStrip({ symbols = ["SPY", "QQQ", "AAPL", "MSFT", 
       ) : (
         quotes.map((q) => {
           const pos = q.change >= 0;
+          const params = new URLSearchParams();
+          if (view) params.set("view", view);
+          params.set("load", q.symbol);
+          const href = `/?${params.toString()}`;
           return (
-            <div key={q.symbol} className="live-quote">
+            <Link key={q.symbol} className="live-quote hover:border-[var(--bb-amber)]" href={href} prefetch={false}>
               <span className="ticker">{q.symbol}</span>
               <span className="keycode">{q.symbol.includes('-') ? 'CR' : 'EQ'}</span>
               <span className="last">{q.last.toFixed(2)}</span>
@@ -23,7 +29,7 @@ export async function LiveQuoteStrip({ symbols = ["SPY", "QQQ", "AAPL", "MSFT", 
                 {pos ? "+" : ""}
                 {q.change.toFixed(2)} ({q.changePct.toFixed(2)}%)
               </span>
-            </div>
+            </Link>
           );
         })
       )}

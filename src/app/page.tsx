@@ -10,6 +10,7 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const view = params.view || "dash"; 
+  const load = params.load?.toUpperCase();
   
   const data = await getHypotheses('active', params.search);
   const riskSummary = await getPortfolioRiskSummary();
@@ -41,9 +42,10 @@ export default async function Home({
       </div>
 
       {/* LIVE QUOTE STRIP */}
-      <LiveQuoteStrip />
+      <LiveQuoteStrip view={view} />
 
       <PanelWorkspace
+        key={load || 'default'}
         watchlist={data}
         riskSummary={riskSummary}
         events={events.map((e) => ({ ...e, startTime: e.startTime?.toISOString?.() || e.startTime }))}
@@ -51,6 +53,7 @@ export default async function Home({
         equityReturns={equityReturns}
         behavior={behavior}
         marketState={marketState}
+        initialSecurity={load}
       />
     </div>
   );

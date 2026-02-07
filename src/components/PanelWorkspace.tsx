@@ -133,6 +133,7 @@ export function PanelWorkspace({
   equityReturns,
   behavior,
   marketState,
+  initialSecurity,
 }: {
   watchlist: Hypothesis[];
   riskSummary: RiskSummary;
@@ -141,10 +142,11 @@ export function PanelWorkspace({
   equityReturns: number[];
   behavior: BehavioralStats;
   marketState: MarketStateSummary;
+  initialSecurity?: string | null;
 }) {
   const [activePanel, setActivePanel] = useState(0);
-  const [panels, setPanels] = useState<PanelState[]>([
-    { id: 0, functionId: 'WATCH' },
+  const [panels, setPanels] = useState<PanelState[]>(() => [
+    { id: 0, functionId: 'WATCH', security: initialSecurity || undefined },
     { id: 1, functionId: 'RISK' },
     { id: 2, functionId: 'NEWS' },
   ]);
@@ -195,14 +197,6 @@ export function PanelWorkspace({
     },
     [linked, sector]
   );
-
-  const handleSuggestionExecute = (s: Suggestion) => {
-    if (s.type === 'function') {
-      handleGo(String(s.payload));
-    } else if (s.type === 'security') {
-      handleGo(String(s.payload));
-    }
-  };
 
   const handleGo = (input: string) => {
     const tokens = input.trim().toUpperCase().split(/\s+/).filter(Boolean);
@@ -270,6 +264,14 @@ export function PanelWorkspace({
       }));
     return [...fnMatches, ...securityMatches].slice(0, 10);
   }, [command, watchlist]);
+
+  const handleSuggestionExecute = (s: Suggestion) => {
+    if (s.type === 'function') {
+      handleGo(String(s.payload));
+    } else if (s.type === 'security') {
+      handleGo(String(s.payload));
+    }
+  };
 
   const renderPanel = (panel: PanelState) => {
     switch (panel.functionId) {
