@@ -54,7 +54,16 @@ async function fetchEquity(symbol: string): Promise<Quote | null> {
     const url = `https://stooq.pl/q/l/?s=${formatted}&f=sd2t2ohlcv&h&e=json`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
-    const json = await res.json();
+    const raw = await res.text();
+
+    let json: { symbols?: { close: number; open: number; high: number; low: number; volume: number }[] } | null = null;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // stooq sometimes responds with a plain-text rate-limit message; treat as unavailable
+      return null;
+    }
+
     const first = json?.symbols?.[0];
     if (!first || !first.close || Number.isNaN(first.close)) return null;
     const change = first.close - first.open;

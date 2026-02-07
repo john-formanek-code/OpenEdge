@@ -42,8 +42,16 @@ async function fetchStooq(symbol: string): Promise<Quote | null> {
   const url = `https://stooq.pl/q/l/?s=${formatted}&f=sd2t2ohlcv&h&e=json`;
   const res = await fetch(url, { next: { revalidate: 300 } });
   if (!res.ok) return null;
-  const json = (await res.json()) as { symbols?: StooqQuote[] };
-  const first = json.symbols?.[0];
+  const raw = await res.text();
+  let parsed: { symbols?: StooqQuote[] } | null = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // stooq occasionally returns a plain-text rate limit message instead of JSON
+    return null;
+  }
+
+  const first = parsed?.symbols?.[0];
   if (!first || first.close === 0 || Number.isNaN(first.close)) return null;
   return toQuote(first);
 }
