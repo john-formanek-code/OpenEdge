@@ -1,0 +1,150 @@
+import { getHypothesisById, getTradePlan, getAssetClassExposure, getAuditTrail } from "@/lib/actions/hypotheses";
+import { db as mainDb } from "@/db";
+import { executions as executionsTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { EditHypothesisDialog } from "@/components/EditHypothesisDialog";
+import { PositionBuilder } from "@/components/PositionBuilder";
+import { ExecutionScorecard } from "@/components/ExecutionScorecard";
+import { PnLDecomposition } from "@/components/PnLDecomposition";
+import { LogExecutionForm } from "@/components/LogExecutionForm";
+import { AuditLogView } from "@/components/AuditLogView";
+import { StateSwitcher } from "@/components/StateSwitcher";
+
+export default async function HypothesisPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { id } = await params;
+  const { tab } = await searchParams;
+  const currentTab = tab || 'oms';
+
+  const { hypothesis } = await getHypothesisById(id);
+  const tradePlan = await getTradePlan(id);
+  const auditLogs = await getAuditTrail(id);
+  const currentExposure = hypothesis ? await getAssetClassExposure(hypothesis.assetClass) : 0;
+  const executions = await mainDb.select().from(executionsTable).where(eq(executionsTable.hypothesisId, id));
+
+  if (!hypothesis) notFound();
+
+  // Basic PnL calc for header
+  const totalBuy = executions.filter(e => e.side === 'buy').reduce((s, e) => s + (e.price * e.size), 0);
+  const totalSell = executions.filter(e => e.side === 'sell').reduce((s, e) => s + (e.price * e.size), 0);
+  const realizedPnL = totalSell > 0 ? (totalSell - totalBuy) : 0;
+
+  return (
+    <div className="h-full flex flex-col bg-black">
+      
+      {/* Symbol Header Strip */}
+      <div className="bg-[#111] border-b border-[#333] px-3 py-2 flex items-center justify-between shadow-2xl">
+        <div className="flex items-center space-x-6">
+          <Link href="/" className="text-zinc-600 hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div className="flex items-baseline space-x-3">
+            <h1 className="text-2xl font-black text-white italic">{hypothesis.symbol}</h1>
+            <span className={`text-xs font-black uppercase ${hypothesis.bias === 'long' ? 'text-green-500' : 'text-red-500'}`}>
+              {hypothesis.bias} · {hypothesis.timeframe}
+            </span>
+          </div>
+          <div className="h-8 w-px bg-[#222]" />
+          <div className="flex space-x-4">
+            <div className="text-center">
+              <div className="text-[8px] text-zinc-600 font-bold uppercase">PnL_REAL</div>
+              <div className={`text-xs font-mono font-bold ${realizedPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                ${realizedPnL.toFixed(2)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-[8px] text-zinc-600 font-bold uppercase">Exposure</div>
+              <div className="text-xs font-mono font-bold text-blue-400">
+                ${currentExposure.toFixed(0)}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <StateSwitcher hypothesisId={id} currentState={hypothesis.state || 'idea'} />
+      </div>
+
+      {/* Terminal Viewports */}
+      <div className="flex-1 grid grid-cols-12 gap-[1px] bg-[#222] overflow-hidden">
+        
+        {/* LEFT: NAV/INFO (3 Cols) */}
+        <div className="col-span-3 bg-black flex flex-col min-h-0">
+          <div className="terminal-header">MODULE_SELECT</div>
+          <div className="p-2 space-y-1">
+            <Link href="?tab=oms" className={`block px-3 py-2 text-[10px] font-bold uppercase transition-colors border ${currentTab === 'oms' ? 'bg-[#1a1a1a] text-[var(--terminal-accent)] border-[color:var(--terminal-accent)]' : 'text-zinc-600 border-[#222] hover:bg-[#050505]'}`}>
+              1. ORDER_MGMT (OMS)
+            </Link>
+            <Link href="?tab=anal" className={`block px-3 py-2 text-[10px] font-bold uppercase transition-colors border ${currentTab === 'anal' ? 'bg-[#1a1a1a] text-[var(--terminal-accent)] border-[color:var(--terminal-accent)]' : 'text-zinc-600 border-[#222] hover:bg-[#050505]'}`}>
+              2. ANALYTICS (ANAL)
+            </Link>
+            <Link href="?tab=logs" className={`block px-3 py-2 text-[10px] font-bold uppercase transition-colors border ${currentTab === 'logs' ? 'bg-[#1a1a1a] text-[var(--terminal-accent)] border-[color:var(--terminal-accent)]' : 'text-zinc-600 border-[#222] hover:bg-[#050505]'}`}>
+              3. AUDIT_TRAIL (JRNL)
+            </Link>
+          </div>
+          
+          <div className="mt-auto border-t border-[#222] p-4 bg-[#050505] space-y-4">
+             <div className="flex justify-between items-center">
+               <span className="text-[10px] font-black text-zinc-600 uppercase">Strategy</span>
+               <span className="text-[10px] font-mono text-zinc-300">{hypothesis.setupType}</span>
+             </div>
+             <div className="flex justify-between items-center">
+               <span className="text-[10px] font-black text-zinc-600 uppercase">Confidence</span>
+               <div className="flex space-x-1">
+                 {[...Array(5)].map((_, i) => (
+                   <div key={i} className={`w-1 h-3 ${i < (hypothesis.confidence || 0) ? 'bg-[var(--terminal-accent)]' : 'bg-zinc-800'}`} />
+                 ))}
+               </div>
+             </div>
+             <EditHypothesisDialog hypothesis={hypothesis} />
+          </div>
+        </div>
+
+        {/* MAIN VIEWPORT (9 Cols) */}
+        <div className="col-span-9 bg-black flex flex-col min-h-0 border-l border-[#333]">
+          <div className="terminal-header">
+            <span>VIEW: {currentTab.toUpperCase()} · SYS_ID: {id.slice(0,12)}</span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+            {currentTab === 'oms' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#050505] border border-[#222] p-4">
+                    <div className="text-[9px] text-zinc-600 font-black uppercase mb-2">Hypothesis_Trigger</div>
+                    <p className="text-sm font-mono text-zinc-300 leading-relaxed">{hypothesis.triggerCondition}</p>
+                  </div>
+                  <LogExecutionForm hypothesisId={id} />
+                </div>
+                <PositionBuilder hypothesisId={id} initialPlan={tradePlan} currentExposure={currentExposure} />
+              </div>
+            )}
+
+            {currentTab === 'anal' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <ExecutionScorecard executions={executions} plan={tradePlan} />
+                  <PnLDecomposition pnl={realizedPnL} positionSize={currentExposure || (tradePlan?.totalPositionSize || 0) * (tradePlan?.avgEntryPrice || 0)} />
+                </div>
+              </div>
+            )}
+
+            {currentTab === 'logs' && (
+              <div className="space-y-6">
+                <AuditLogView logs={auditLogs} />
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
