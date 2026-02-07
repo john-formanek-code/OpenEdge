@@ -293,7 +293,7 @@ export function PanelWorkspace({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="panel-commandbar">
+      <div className="panel-commandbar sticky top-0 z-20 backdrop-blur-[2px]">
         <div className="flex items-center space-x-2">
           <span className="bb-pill">P{activePanel + 1}</span>
           <select

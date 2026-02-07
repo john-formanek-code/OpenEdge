@@ -35,16 +35,26 @@ export function TerminalFooter() {
   }, []);
 
   return (
-    <footer className="h-6 bg-[#050505] border-t border-[color:var(--bb-border)] flex items-center justify-between px-3 text-[9px] text-[#7a7a7a] uppercase tracking-[0.08em] shrink-0">
-      <div className="flex space-x-4 items-center">
-        <span>status {status}</span>
-        <span>ping {latency !== null ? `${latency}ms` : '—'}</span>
-        <span>last {lastBeat}</span>
+    <footer className="terminal-chrome h-8 border-t border-[color:var(--bb-border)] flex items-center justify-between px-3 text-[9px] uppercase tracking-[0.08em] shrink-0 relative overflow-hidden">
+      <div className="flex space-x-4 items-center text-[#c2c2c2] font-mono">
+        <div className="flex items-center space-x-2">
+          <span className={`status-led ${status === 'UP' ? 'on' : 'off'}`} aria-label="connection status" />
+          <span className="font-bold">IB LINK</span>
+          <span className="text-[#777]">/</span>
+          <span className="text-[var(--bb-amber)]">DATA</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="bb-chip">PING</span>
+          <span>{latency !== null ? `${latency}ms` : '—'}</span>
+        </div>
+        <div className="text-[#8a8a8a]">LAST BEAT {lastBeat}</div>
       </div>
-      <div className="flex space-x-3 items-center">
-        <span className="text-[var(--bb-amber)] font-black">port</span>
-        <span className="bb-chip">2500</span>
+      <div className="flex space-x-3 items-center text-[var(--bb-amber)] font-black">
+        <span>PORT 2500</span>
+        <span className="text-[#777]">•</span>
+        <span className="text-white">FEED STXQ</span>
       </div>
+      <div className="noise-overlay pointer-events-none" aria-hidden />
     </footer>
   );
 }

@@ -21,20 +21,23 @@ export default async function Home({
 
   return (
     <div className="h-full flex flex-col bg-black">
-      {/* FUNCTION KEYS (Fake Tab Strip) */}
-      <div className="h-6 bg-[#0b0b0b] border-b border-[color:var(--bb-border)] flex items-end px-1 space-x-1">
-        <Link href="/?view=dash" className={`px-4 py-0.5 text-[9px] font-bold border-t border-x border-[color:var(--bb-border)] ${view === 'dash' ? 'bg-[var(--bb-amber)] text-black' : 'bg-black text-[#666] hover:text-[#ccc]'}`}>
-          1) DASHBOARD
-        </Link>
-        <Link href="/?view=risk" className={`px-4 py-0.5 text-[9px] font-bold border-t border-x border-[color:var(--bb-border)] ${view === 'risk' ? 'bg-[var(--bb-amber)] text-black' : 'bg-black text-[#666] hover:text-[#ccc]'}`}>
-          2) RISK_SUITE
-        </Link>
-        <Link href="/lab" className="px-4 py-0.5 text-[9px] font-bold border-t border-x border-[color:var(--bb-border)] bg-black text-[#666] hover:text-[#ccc]">
-          3) SIGNAL_LAB
-        </Link>
-        <Link href="/blotter" className="px-4 py-0.5 text-[9px] font-bold border-t border-x border-[color:var(--bb-border)] bg-black text-[#666] hover:text-[#ccc]">
-          4) EXECUTION
-        </Link>
+      {/* FUNCTION KEYS (Bloomberg-style strip) */}
+      <div className="function-strip">
+        {[
+          { key: 'F1', label: 'Dashboard', href: '/?view=dash', active: view === 'dash' },
+          { key: 'F2', label: 'Risk Suite', href: '/?view=risk', active: view === 'risk' },
+          { key: 'F3', label: 'Signal Lab', href: '/lab', active: false },
+          { key: 'F4', label: 'Execution', href: '/blotter', active: false },
+          { key: 'F5', label: 'Watchlist', href: '/watch', active: false },
+          { key: 'F6', label: 'System', href: '/settings', active: false },
+          { key: 'F7', label: 'Help', href: '/help', active: false },
+          { key: 'F8', label: 'Journal', href: '/blotter?view=journal', active: false },
+        ].map((item) => (
+          <Link key={item.key} href={item.href} className={`function-key ${item.active ? 'active' : ''}`}>
+            <span className="keycode">{item.key}</span>
+            <span className="hidden sm:inline">{item.label}</span>
+          </Link>
+        ))}
       </div>
 
       {/* LIVE QUOTE STRIP */}
