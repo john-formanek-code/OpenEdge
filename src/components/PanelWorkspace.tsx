@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { PortfolioRiskPanel } from './PortfolioRiskPanel';
 import { SurvivalPanel } from './SurvivalPanel';
 import { BehavioralDashboard } from './BehavioralDashboard';
+import { WatchlistBoard } from './WatchlistBoard';
 import { DraggablePanel } from './workspace/DraggablePanel';
 import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
 import { PanelState as WorkspacePanelState } from '@/types/workspace';
@@ -27,13 +28,14 @@ export type Equity = { balance: number; drawdown: number };
 export type BehavioralStats = Parameters<typeof BehavioralDashboard>[0]['stats'];
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
 
-type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'BEHAV';
+type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'BEHAV' | 'WATCHLIST';
 
 const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: boolean; related: FunctionId[] }> = {
   WATCH: { label: 'Monitor', related: ['RISK', 'NEWS'] },
   RISK: { label: 'Risk Suite', related: ['WATCH', 'NEWS'] },
   NEWS: { label: 'News/Events', related: ['WATCH'] },
   BEHAV: { label: 'Behavioral', related: ['WATCH', 'RISK'] },
+  WATCHLIST: { label: 'Watchlist', related: ['WATCH'] },
 };
 
 const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
@@ -186,6 +188,7 @@ export function PanelWorkspace({
     toggleMaximize,
     closePanel,
     openPanel,
+    addOrOpenPanel,
   } = useWorkspaceLayout(INITIAL_WORKSPACE_PANELS);
 
   const [sector, setSector] = useState<'EQUITY' | 'CRYPTO' | 'FX'>('EQUITY');
@@ -225,6 +228,40 @@ export function PanelWorkspace({
     setCommand('');
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const dragData = e.dataTransfer.getData('application/trade-os-panel');
+    if (!dragData) return;
+
+    try {
+      const { id, title } = JSON.parse(dragData);
+      
+      if (!workspaceRef.current) return;
+      const rect = workspaceRef.current.getBoundingClientRect();
+      const dropX = e.clientX - rect.left;
+      const dropY = e.clientY - rect.top;
+
+      const spawnX = Math.max(10, Math.min(dropX - 100, rect.width - 510));
+      const spawnY = Math.max(10, Math.min(dropY - 20, rect.height - 410));
+
+      addOrOpenPanel({
+        id,
+        title,
+        x: spawnX,
+        y: spawnY,
+        width: 500,
+        height: 400,
+      });
+    } catch (err) {
+      console.error('Failed to parse drag data', err);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
   if (!isLoaded) {
     return <div className="flex-1 bg-black animate-pulse" />;
   }
@@ -239,6 +276,8 @@ export function PanelWorkspace({
         return <NewsPanel events={events} marketState={marketState} />;
       case 'BEHAV':
         return <div className="p-2 h-full"><BehavioralDashboard stats={behavior} /></div>;
+      case 'WATCHLIST':
+        return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
       default:
         return null;
     }
@@ -302,7 +341,12 @@ export function PanelWorkspace({
       </div>
 
       {/* WORKSPACE AREA */}
-      <div ref={workspaceRef} className="flex-1 relative overflow-hidden bg-[#030303]">
+      <div 
+        ref={workspaceRef} 
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className="flex-1 relative overflow-hidden bg-[#030303]"
+      >
           {/* Subtle grid background */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
                style={{backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '40px 40px'}} />

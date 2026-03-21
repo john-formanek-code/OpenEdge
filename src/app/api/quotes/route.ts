@@ -119,7 +119,7 @@ async function fetchCryptoBatch(batch: BatchMap[]): Promise<Quote[]> {
       quotes.push({
         symbol: symbol.toUpperCase(),
         last: entry.usd,
-        change: ((entry.usd_24h_change ?? 0) / 100) * entry.usd,
+        change: ((entry.usd_24h_change ?? 0) / 100) * (entry.usd ?? 0),
         changePct: entry.usd_24h_change ?? 0,
         high24h: entry.usd_24h_high,
         low24h: entry.usd_24h_low,

@@ -1,7 +1,7 @@
 import { getHypotheses, getPortfolioRiskSummary, getMarketEvents, getEquitySummary, getBehavioralStats, getEquityReturns, getLatestMarketState } from "@/lib/actions/hypotheses";
 import { PanelWorkspace, type Hypothesis, type RiskSummary, type MarketEvent, type MarketStateSummary } from "@/components/PanelWorkspace";
 import { LiveQuoteStrip } from "@/components/LiveQuoteStrip";
-import Link from "next/link";
+import { FunctionKey } from "@/components/FunctionKey";
 
 export default async function Home({
   searchParams,
@@ -25,19 +25,16 @@ export default async function Home({
       {/* FUNCTION KEYS (Bloomberg-style strip) */}
       <div className="function-strip">
         {[
-          { key: 'F1', label: 'Dashboard', href: '/?view=dash', active: view === 'dash' },
-          { key: 'F2', label: 'Risk Suite', href: '/?view=risk', active: view === 'risk' },
+          { key: 'F1', label: 'Dashboard', href: '/?view=dash', active: view === 'dash', panelId: 'WATCH' },
+          { key: 'F2', label: 'Risk Suite', href: '/?view=risk', active: view === 'risk', panelId: 'RISK' },
           { key: 'F3', label: 'Signal Lab', href: '/lab', active: false },
           { key: 'F4', label: 'Execution', href: '/blotter', active: false },
-          { key: 'F5', label: 'Watchlist', href: '/watch', active: false },
+          { key: 'F5', label: 'Watchlist', href: '/watch', active: false, panelId: 'WATCHLIST' },
           { key: 'F6', label: 'System', href: '/settings', active: false },
           { key: 'F7', label: 'Help', href: '/help', active: false },
           { key: 'F8', label: 'Journal', href: '/blotter?view=journal', active: false },
         ].map((item) => (
-          <Link key={item.key} href={item.href} className={`function-key ${item.active ? 'active' : ''}`}>
-            <span className="keycode">{item.key}</span>
-            <span className="hidden sm:inline">{item.label}</span>
-          </Link>
+          <FunctionKey key={item.key} item={item} />
         ))}
       </div>
 

@@ -52,9 +52,12 @@ const DEFAULT_SYMBOLS = [
   'TSLA',
 ];
 
+const STORAGE_KEY = 'trade_os_watchlist_symbols';
+
 export function WatchlistBoard() {
-  const [symbols] = useState<string[]>(DEFAULT_SYMBOLS);
+  const [symbols, setSymbols] = useState<string[]>([]);
   const [input, setInput] = useState('');
+  const [newSymbol, setNewSymbol] = useState('');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +65,30 @@ export function WatchlistBoard() {
   const [searchText, setSearchText] = useState('');
   const [appliedLabel, setAppliedLabel] = useState('ALL');
   const [pulse, setPulse] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load symbols from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setSymbols(JSON.parse(stored));
+      } else {
+        setSymbols(DEFAULT_SYMBOLS);
+      }
+    } catch (e) {
+      console.error('Failed to load watchlist symbols', e);
+      setSymbols(DEFAULT_SYMBOLS);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save symbols to localStorage whenever they change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(symbols));
+    }
+  }, [symbols, isLoaded]);
 
   const fetchQuotes = async (list: string[]) => {
     if (list.length === 0) {
@@ -92,10 +119,12 @@ export function WatchlistBoard() {
   };
 
   useEffect(() => {
-    fetchQuotes(symbols);
-    const id = setInterval(() => fetchQuotes(symbols), 15000);
-    return () => clearInterval(id);
-  }, [symbols]);
+    if (isLoaded) {
+      fetchQuotes(symbols);
+      const id = setInterval(() => fetchQuotes(symbols), 15000);
+      return () => clearInterval(id);
+    }
+  }, [symbols, isLoaded]);
 
   useEffect(() => {
     if (!selected && quotes.length > 0) {
@@ -136,6 +165,20 @@ export function WatchlistBoard() {
     setTimeout(() => setPulse(false), 400);
   };
 
+  const handleAddSymbol = (e: React.FormEvent) => {
+    e.preventDefault();
+    const sym = newSymbol.trim().toUpperCase();
+    if (sym && !symbols.includes(sym)) {
+      setSymbols(prev => [sym, ...prev]);
+      setNewSymbol('');
+    }
+  };
+
+  const handleRemoveSymbol = (e: React.MouseEvent, sym: string) => {
+    e.stopPropagation();
+    setSymbols(prev => prev.filter(s => s !== sym));
+  };
+
   const tradingViewLink = (sym: string) => {
     const normalized = sym.replace('-', '');
     return `https://www.tradingview.com/symbols/${normalized}/`;
@@ -143,45 +186,54 @@ export function WatchlistBoard() {
 
   return (
     <div className="h-full grid grid-cols-1 xl:grid-cols-2 gap-[1px] bg-[var(--bb-border)]">
-      <div className="bg-black p-3 flex flex-col">
-        <form onSubmit={handleSubmit} className="flex space-x-2 mb-3 items-center">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                const next = input.trim();
-                setSearchText(next);
-                setAppliedLabel(next === '' ? 'ALL' : next.toUpperCase());
-              }
-            }}
-            className="bb-input flex-1"
-            placeholder=""
-          />
-        </form>
-        <div className="hint-line">
+      <div className="bg-black p-3 flex flex-col min-h-0">
+        <div className="flex gap-2 mb-3">
+          <form onSubmit={handleSubmit} className="flex-1 flex items-center bg-[#0a0a0a] border border-[#222] h-8 px-2">
+            <span className="text-[#555] text-[10px] mr-2 font-mono uppercase">Filter:</span>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="flex-1 bg-transparent text-xs text-zinc-300 outline-none font-mono"
+              placeholder="ALL / CRYPTO / AAPL..."
+            />
+          </form>
+          
+          <form onSubmit={handleAddSymbol} className="flex-1 flex items-center bg-[#0a0a0a] border border-[#222] h-8 px-2">
+            <span className="text-[#555] text-[10px] mr-2 font-mono uppercase">Add:</span>
+            <input
+              value={newSymbol}
+              onChange={(e) => setNewSymbol(e.target.value)}
+              className="flex-1 bg-transparent text-xs text-zinc-300 outline-none font-mono"
+              placeholder="TSLA / SOL-USD..."
+            />
+            <button type="submit" className="text-amber-500 hover:text-amber-400 font-bold ml-1">+</button>
+          </form>
+        </div>
+
+        <div className="hint-line mb-2">
           Active filter:{' '}
           <span className={`text-[var(--bb-amber)] font-bold ${pulse ? 'animate-pulse' : ''}`}>{appliedLabel}</span>{' '}
-          · showing {filtered.length}/{quotes.length} ·
-          Type CRYPTO, EQUITIES, STOCKS, ALL or a ticker fragment then press Enter (updates in place, no buttons).
+          · showing {filtered.length}/{quotes.length} instruments.
         </div>
-        {error && <div className="text-[10px] text-[var(--bb-red)] mt-2">{error}</div>}
-        {loading && <div className="text-[10px] text-[#888] mt-2">Loading…</div>}
-        <div className="flex-1 overflow-auto mt-2">
+
+        {error && <div className="text-[10px] text-[var(--bb-red)] mb-2 font-mono uppercase">{error}</div>}
+        {loading && <div className="text-[10px] text-[#888] mb-2 font-mono uppercase animate-pulse">Fetching live data...</div>}
+
+        <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="bb-table">
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th>Last</th>
-                <th>Chg</th>
-                <th>Chg%</th>
+                <th className="text-right">Last</th>
+                <th className="text-right">Chg</th>
+                <th className="text-right">Chg%</th>
+                <th className="w-8"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-[10px] text-[#777] py-4">No instruments match this filter.</td>
+                  <td colSpan={5} className="text-center text-[10px] text-[#777] py-8 font-mono">NO INSTRUMENTS MATCHED</td>
                 </tr>
               ) : (
                 filtered.map((q) => {
@@ -189,16 +241,25 @@ export function WatchlistBoard() {
                   return (
                     <tr
                       key={q.symbol}
-                      className="bb-row cursor-pointer"
+                      className={`bb-row cursor-pointer ${selected?.symbol === q.symbol ? 'bg-zinc-900/50' : ''}`}
                       onClick={() => setSelected(q)}
                     >
                       <td className="font-bold text-[var(--bb-amber)]">{q.symbol}</td>
-                      <td className="text-right font-mono">{q.last.toFixed(2)}</td>
+                      <td className="text-right font-mono text-zinc-200">{(q.last ?? 0).toFixed(2)}</td>
                       <td className={`text-right font-mono ${pos ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}`}>
-                        {pos ? '+' : ''}{q.change.toFixed(2)}
+                        {pos ? '+' : ''}{(q.change ?? 0).toFixed(2)}
                       </td>
                       <td className={`text-right font-mono ${pos ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}`}>
-                        {pos ? '+' : ''}{q.changePct.toFixed(2)}%
+                        {pos ? '+' : ''}{(q.changePct ?? 0).toFixed(2)}%
+                      </td>
+                      <td className="text-center">
+                        <button 
+                          onClick={(e) => handleRemoveSymbol(e, q.symbol)}
+                          className="text-[#333] hover:text-red-500 transition-colors text-xs font-bold px-1"
+                          title="Remove from watchlist"
+                        >
+                          ×
+                        </button>
                       </td>
                     </tr>
                   );
@@ -228,15 +289,15 @@ export function WatchlistBoard() {
               </a>
             </div>
             <div className="grid grid-cols-2 gap-3 text-[12px] font-mono">
-              <div>Last: {selected.last.toFixed(2)}</div>
-              <div className={selected.change >= 0 ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}>
-                Δ {selected.change >= 0 ? '+' : ''}{selected.change.toFixed(2)} ({selected.changePct >= 0 ? '+' : ''}{selected.changePct.toFixed(2)}%)
+              <div>Last: {(selected.last ?? 0).toFixed(2)}</div>
+              <div className={(selected.change ?? 0) >= 0 ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}>
+                Δ {(selected.change ?? 0) >= 0 ? '+' : ''}{(selected.change ?? 0).toFixed(2)} ({(selected.changePct ?? 0) >= 0 ? '+' : ''}{(selected.changePct ?? 0).toFixed(2)}%)
               </div>
-              {selected.open !== undefined && <div>Open: {selected.open.toFixed(2)}</div>}
-              {selected.high !== undefined && <div>High: {selected.high.toFixed(2)}</div>}
-              {selected.low !== undefined && <div>Low: {selected.low.toFixed(2)}</div>}
-              {selected.high24h !== undefined && <div>24H High: {selected.high24h.toFixed(2)}</div>}
-              {selected.low24h !== undefined && <div>24H Low: {selected.low24h.toFixed(2)}</div>}
+              {selected.open !== undefined && <div>Open: {(selected.open ?? 0).toFixed(2)}</div>}
+              {selected.high !== undefined && <div>High: {(selected.high ?? 0).toFixed(2)}</div>}
+              {selected.low !== undefined && <div>Low: {(selected.low ?? 0).toFixed(2)}</div>}
+              {selected.high24h !== undefined && <div>24H High: {(selected.high24h ?? 0).toFixed(2)}</div>}
+              {selected.low24h !== undefined && <div>24H Low: {(selected.low24h ?? 0).toFixed(2)}</div>}
               {selected.volume !== undefined && <div>Volume: {selected.volume.toLocaleString()}</div>}
               {selected.marketCap !== undefined && <div>Market Cap: {selected.marketCap.toLocaleString()}</div>}
               {selected.assetClass && <div>Asset Class: {selected.assetClass.toUpperCase()}</div>}

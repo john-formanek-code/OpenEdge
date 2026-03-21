@@ -95,6 +95,36 @@ export function useWorkspaceLayout(initialPanels: PanelState[]) {
       };
     });
   }, []);
+
+  const addOrOpenPanel = useCallback((panel: Omit<PanelState, 'zIndex' | 'isClosed' | 'isMaximized'>) => {
+    setState((prev) => {
+      const existing = prev.panels.find(p => p.id === panel.id);
+      const maxZ = Math.max(...prev.panels.map((p) => p.zIndex), 0);
+      
+      if (existing) {
+        return {
+          ...prev,
+          activePanelId: panel.id,
+          panels: prev.panels.map(p => 
+            p.id === panel.id ? { ...p, isClosed: false, zIndex: maxZ + 1 } : p
+          )
+        };
+      }
+
+      const newPanel: PanelState = {
+        ...panel,
+        isClosed: false,
+        isMaximized: false,
+        zIndex: maxZ + 1
+      };
+
+      return {
+        ...prev,
+        activePanelId: panel.id,
+        panels: [...prev.panels, newPanel]
+      };
+    });
+  }, []);
   
   const resetLayout = useCallback(() => {
     setState({ panels: initialPanels, activePanelId: null });
@@ -109,6 +139,7 @@ export function useWorkspaceLayout(initialPanels: PanelState[]) {
     toggleMaximize,
     closePanel,
     openPanel,
+    addOrOpenPanel,
     resetLayout,
   };
 }
