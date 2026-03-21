@@ -1,9 +1,12 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { PortfolioRiskPanel } from './PortfolioRiskPanel';
 import { SurvivalPanel } from './SurvivalPanel';
 import { BehavioralDashboard } from './BehavioralDashboard';
+import { DraggablePanel } from './workspace/DraggablePanel';
+import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
+import { PanelState as WorkspacePanelState } from '@/types/workspace';
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -23,19 +26,6 @@ export type MarketEvent = { id: string; name: string; impact: string; startTime:
 export type Equity = { balance: number; drawdown: number };
 export type BehavioralStats = Parameters<typeof BehavioralDashboard>[0]['stats'];
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
-type Suggestion = {
-  id: string;
-  label: string;
-  sublabel?: string;
-  type: 'function' | 'security';
-  payload: FunctionId | string;
-};
-
-type PanelState = {
-  id: number;
-  security?: string;
-  functionId: FunctionId;
-};
 
 type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'BEHAV';
 
@@ -46,32 +36,66 @@ const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: b
   BEHAV: { label: 'Behavioral', related: ['WATCH', 'RISK'] },
 };
 
-const FUNCTIONS_BY_NUMBER: FunctionId[] = ['WATCH', 'RISK', 'NEWS', 'BEHAV'];
+const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
+  {
+    id: 'WATCH',
+    title: 'Monitor',
+    x: 10,
+    y: 10,
+    width: 500,
+    height: 400,
+    isMaximized: false,
+    isClosed: false,
+    zIndex: 1,
+  },
+  {
+    id: 'RISK',
+    title: 'Risk Suite',
+    x: 520,
+    y: 10,
+    width: 600,
+    height: 400,
+    isMaximized: false,
+    isClosed: false,
+    zIndex: 2,
+  },
+  {
+    id: 'NEWS',
+    title: 'News/Events',
+    x: 10,
+    y: 420,
+    width: 500,
+    height: 300,
+    isMaximized: false,
+    isClosed: false,
+    zIndex: 3,
+  },
+];
 
 function WatchPanel({ data, security, onSelect }: { data: Hypothesis[]; security?: string; onSelect: (symbol: string) => void }) {
   const rows = security ? data.filter((d) => d.symbol === security) : data;
   return (
-    <div className="panel-body">
-      <table className="bb-table">
+    <div className="p-2 h-full overflow-auto">
+      <table className="w-full text-[11px] font-mono border-collapse">
         <thead>
-          <tr>
-            <th>Ticker</th>
-            <th>Bias</th>
-            <th className="text-right">State</th>
+          <tr className="text-[#666] border-b border-[#222] text-left">
+            <th className="pb-1">Ticker</th>
+            <th className="pb-1">Bias</th>
+            <th className="pb-1 text-right">State</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((item) => (
             <tr
               key={item.id}
-              className="bb-row cursor-pointer hover:bg-[#0f0f0f]"
+              className="border-b border-[#111] cursor-pointer hover:bg-[#0f0f0f]"
               onClick={() => onSelect(item.symbol)}
             >
-              <td className="font-bold text-[var(--bb-amber)]">{item.symbol}</td>
-              <td className={item.bias === 'long' ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}>
+              <td className="py-1 font-bold text-[var(--bb-amber)]">{item.symbol}</td>
+              <td className={cn("py-1", item.bias === 'long' ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]')}>
                 {item.bias.toUpperCase()}
               </td>
-              <td className="text-right text-[#888]">{item.state?.slice(0, 3) || '---'}</td>
+              <td className="py-1 text-right text-[#888]">{item.state?.slice(0, 3) || '---'}</td>
             </tr>
           ))}
         </tbody>
@@ -82,45 +106,54 @@ function WatchPanel({ data, security, onSelect }: { data: Hypothesis[]; security
 
 function RiskPanel({ riskSummary, equityReturns, equity }: { riskSummary: RiskSummary; equityReturns: number[]; equity: Equity }) {
   return (
-    <div className="grid grid-cols-2 gap-2 panel-body">
-      <div className="panel-subwindow">
+    <div className="grid grid-cols-2 gap-2 p-2 h-full overflow-auto">
+      <div className="bg-[#050505] border border-[#111] p-1">
         <SurvivalPanel currentDD={equity.drawdown} historyR={equityReturns} />
       </div>
-      <div className="panel-subwindow">
+      <div className="bg-[#050505] border border-[#111] p-1">
         <PortfolioRiskPanel data={riskSummary} />
       </div>
     </div>
   );
 }
 
-function NewsPanel({ events }: { events: MarketEvent[] }) {
+function NewsPanel({ events, marketState }: { events: MarketEvent[]; marketState: MarketStateSummary }) {
   return (
-    <div className="panel-body">
-      <div className="bb-header sticky top-0 z-10">Upcoming Events</div>
-      <div className="divide-y divide-[#111]">
-        {events.map((e) => {
-          const ts = new Date(e.startTime);
-          return (
-            <div key={e.id} className="flex items-center justify-between py-2 px-1 bb-row">
-              <div className="flex items-center space-x-2">
-                <span className={`bb-pill ${e.impact === 'high' ? 'text-[var(--bb-red)]' : 'text-[#aaa]'}`}>
-                  {e.impact.toUpperCase()}
-                </span>
-                <span className="text-[10px] text-white">{e.name}</span>
-              </div>
-              <span className="text-[10px] text-[#888] font-mono">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+    <div className="flex flex-col h-full overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 p-2">
+            <div className="lg:col-span-2 border border-[#111] bg-[#050505] overflow-auto max-h-[250px]">
+                <div className="text-[9px] font-black text-[#555] uppercase px-2 py-1 border-b border-[#111] bg-[#0a0a0a] sticky top-0">Upcoming Events</div>
+                <div className="divide-y divide-[#111]">
+                    {events.map((e) => {
+                        const ts = new Date(e.startTime);
+                        return (
+                            <div key={e.id} className="flex items-center justify-between py-1.5 px-2 hover:bg-[#0f0f0f]">
+                                <div className="flex items-center space-x-2">
+                                    <span className={cn("text-[9px] font-bold", e.impact === 'high' ? 'text-[var(--bb-red)]' : 'text-[#aaa]')}>
+                                        {e.impact.toUpperCase()}
+                                    </span>
+                                    <span className="text-[10px] text-white truncate max-w-[150px]">{e.name}</span>
+                                </div>
+                                <span className="text-[10px] text-[#888] font-mono">{ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function BehaviorPanel({ stats }: { stats: BehavioralStats }) {
-  return (
-    <div className="panel-body">
-      <BehavioralDashboard stats={stats} />
+            <div className="border border-[#111] bg-[#050505] p-2 space-y-2 text-[10px]">
+                <div className="flex justify-between items-center">
+                    <span className="text-[#888]">REGIME</span>
+                    <span className="text-[var(--bb-amber)] font-black uppercase">{marketState.regime}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-[#888]">VIX</span>
+                    <span className="text-white font-mono">{marketState.vixProxy}</span>
+                </div>
+                <div className="h-px bg-[#111]" />
+                <div className="text-[#888]">NARRATIVE</div>
+                <div className="text-white leading-tight">{marketState.biasSummary}</div>
+            </div>
+        </div>
     </div>
   );
 }
@@ -144,304 +177,164 @@ export function PanelWorkspace({
   marketState: MarketStateSummary;
   initialSecurity?: string | null;
 }) {
-  const [activePanel, setActivePanel] = useState(0);
-  const [panels, setPanels] = useState<PanelState[]>(() => [
-    { id: 0, functionId: 'WATCH', security: initialSecurity || undefined },
-    { id: 1, functionId: 'RISK' },
-    { id: 2, functionId: 'NEWS' },
-  ]);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const {
+    state,
+    isLoaded,
+    bringToFront,
+    updatePanelBounds,
+    toggleMaximize,
+    closePanel,
+    openPanel,
+  } = useWorkspaceLayout(INITIAL_WORKSPACE_PANELS);
+
   const [sector, setSector] = useState<'EQUITY' | 'CRYPTO' | 'FX'>('EQUITY');
   const [command, setCommand] = useState('');
-  const [showMenu, setShowMenu] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
   const [linked, setLinked] = useState(true);
-
-  const cyclePanel = useCallback((dir: 1 | -1) => {
-    setActivePanel((p) => {
-      const next = (p + dir + panels.length) % panels.length;
-      return next;
-    });
-  }, [panels.length]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowMenu(false);
-      if (e.altKey && (e.key === 'm' || e.key === 'M')) {
-        e.preventDefault();
-        setShowMenu((s) => !s);
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === ']') {
-        e.preventDefault();
-        cyclePanel(1);
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === '[') {
-        e.preventDefault();
-        cyclePanel(-1);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [cyclePanel]);
+  const [panelSecurities, setPanelSecurities] = useState<Record<string, string>>({
+    WATCH: initialSecurity || '',
+  });
 
   const pushSecurity = useCallback(
-    (symbol: string, targetPanel: number) => {
+    (symbol: string, targetId: string) => {
       const normalized = symbol.toUpperCase();
-      setPanels((prev) =>
-        prev.map((p) =>
-          linked || p.id === targetPanel
-            ? { ...p, security: `${normalized}${sector === 'EQUITY' ? '' : `:${sector}`}` }
-            : p
-        )
-      );
+      const sec = `${normalized}${sector === 'EQUITY' ? '' : `:${sector}`}`;
+      
+      setPanelSecurities((prev) => {
+        if (linked) {
+            const next: Record<string, string> = {};
+            state.panels.forEach(p => next[p.id] = sec);
+            return next;
+        }
+        return { ...prev, [targetId]: sec };
+      });
     },
-    [linked, sector]
+    [linked, sector, state.panels]
   );
 
   const handleGo = (input: string) => {
     const tokens = input.trim().toUpperCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) return;
-    let panelIndex = activePanel;
-    if (/^P\d$/.test(tokens[0])) {
-      panelIndex = parseInt(tokens[0].slice(1), 10) - 1;
-      tokens.shift();
-    }
-    const updated = [...panels];
-    const panel = { ...updated[panelIndex] };
-
-    // link toggle
-    if (tokens.includes('LNK') || tokens.includes('LINK')) setLinked(true);
-    if (tokens.includes('UNL') || tokens.includes('UNLINK')) setLinked(false);
-
-    // function mnemonic
-    const fn = tokens.find((t) => FUNCTIONS_BY_NUMBER.includes(t as FunctionId));
-    if (fn) panel.functionId = fn as FunctionId;
-
-    // numeric jump (menu or related)
-    if (/^\d$/.test(tokens[0] || '')) {
-      const idx = parseInt(tokens[0], 10) - 1;
-      if (showMenu) {
-        const fnTarget = FUNCTIONS_BY_NUMBER[idx];
-        if (fnTarget) panel.functionId = fnTarget;
-      } else {
-        const rel = FUNCTION_REGISTRY[panel.functionId].related[idx];
-        if (rel) panel.functionId = rel;
-      }
-    }
-
-    // security context (simple ticker)
+    
+    // Command parsing logic...
     const tickerToken = tokens.find((t) => /^[A-Z]{1,6}$/.test(t));
     if (tickerToken) {
-      pushSecurity(tickerToken, panelIndex);
+      pushSecurity(tickerToken, state.activePanelId || 'WATCH');
     }
-
-    updated[panelIndex] = { ...panel, security: panel.security };
-    setPanels(updated);
-    setActivePanel(panelIndex);
-    setShowMenu(false);
-    setShowSuggestions(false);
+    
     setCommand('');
   };
 
-  const suggestions: Suggestion[] = useMemo(() => {
-    const term = command.trim().toUpperCase();
-    if (!term) return [];
-    const fnMatches = FUNCTIONS_BY_NUMBER.filter((fn) => fn.startsWith(term) || FUNCTION_REGISTRY[fn].label.toUpperCase().includes(term)).map((fn) => ({
-      id: `fn-${fn}`,
-      label: FUNCTION_REGISTRY[fn].label,
-      sublabel: fn,
-      type: 'function' as const,
-      payload: fn,
-    }));
-    const securityMatches = watchlist
-      .filter((w) => w.symbol.toUpperCase().includes(term))
-      .map((w) => ({
-        id: `sec-${w.id}`,
-        label: w.symbol.toUpperCase(),
-        sublabel: w.bias.toUpperCase(),
-        type: 'security' as const,
-        payload: w.symbol.toUpperCase(),
-      }));
-    return [...fnMatches, ...securityMatches].slice(0, 10);
-  }, [command, watchlist]);
+  if (!isLoaded) {
+    return <div className="flex-1 bg-black animate-pulse" />;
+  }
 
-  const handleSuggestionExecute = (s: Suggestion) => {
-    if (s.type === 'function') {
-      handleGo(String(s.payload));
-    } else if (s.type === 'security') {
-      handleGo(String(s.payload));
-    }
-  };
-
-  const renderPanel = (panel: PanelState) => {
-    switch (panel.functionId) {
+  const renderPanel = (panel: WorkspacePanelState) => {
+    switch (panel.id) {
       case 'WATCH':
-        return <WatchPanel data={watchlist} security={panel.security} onSelect={(s) => pushSecurity(s, panel.id)} />;
+        return <WatchPanel data={watchlist} security={panelSecurities[panel.id]} onSelect={(s) => pushSecurity(s, panel.id)} />;
       case 'RISK':
         return <RiskPanel riskSummary={riskSummary} equityReturns={equityReturns} equity={equity} />;
       case 'NEWS':
-        return (
-          <div className="panel-body grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div className="lg:col-span-2 panel-subwindow">
-              <NewsPanel events={events} />
-            </div>
-            <div className="panel-subwindow">
-              <div className="space-y-2 text-[10px]">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#888]">REGIME</span>
-                  <span className="text-[var(--bb-amber)] font-black uppercase">{marketState.regime}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#888]">VIX</span>
-                  <span className="text-white font-mono">{marketState.vixProxy}</span>
-                </div>
-                <div className="bb-divider" />
-                <div className="text-[#888]">NARRATIVE</div>
-                <div className="text-white leading-tight">{marketState.biasSummary}</div>
-              </div>
-            </div>
-          </div>
-        );
+        return <NewsPanel events={events} marketState={marketState} />;
       case 'BEHAV':
-        return <BehaviorPanel stats={behavior} />;
+        return <div className="p-2 h-full"><BehavioralDashboard stats={behavior} /></div>;
       default:
         return null;
     }
   };
 
-  const menuItems = useMemo(
-    () =>
-      FUNCTIONS_BY_NUMBER.map((fn, idx) => ({
-        id: fn,
-        label: `${idx + 1}) ${FUNCTION_REGISTRY[fn].label}`,
-      })),
-    []
-  );
+  const closedPanels = state.panels.filter(p => p.isClosed);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="panel-commandbar sticky top-0 z-20 backdrop-blur-[2px]">
-        <div className="flex items-center space-x-2">
-          <span className="bb-pill">P{activePanel + 1}</span>
-          <select
-            value={sector}
-            onChange={(e) => setSector(e.target.value as 'EQUITY' | 'CRYPTO' | 'FX')}
-            className="bb-select h-8 w-24"
-            aria-label="Sector key"
-          >
-            <option value="EQUITY">EQUITY</option>
-            <option value="CRYPTO">CRYPTO</option>
-            <option value="FX">FX</option>
-          </select>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-black">
+      {/* COMMAND BAR */}
+      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-[#1a1a1a] bg-[#050505] z-50">
+          <div className="flex items-center bg-[#111] border border-[#222] px-2 h-7">
+            <span className="text-[10px] font-black text-amber-500/80 mr-2">SEC</span>
+            <select
+                value={sector}
+                onChange={(e) => setSector(e.target.value as any)}
+                className="bg-transparent text-[10px] text-zinc-300 outline-none"
+            >
+                <option value="EQUITY">EQUITY</option>
+                <option value="CRYPTO">CRYPTO</option>
+                <option value="FX">FX</option>
+            </select>
+          </div>
+
           <button
-            type="button"
-            className={`bb-button h-8 px-3 ${linked ? '' : 'secondary'}`}
-            onClick={() => setLinked((v) => !v)}
+            onClick={() => setLinked(!linked)}
+            className={cn(
+                "h-7 px-3 text-[10px] font-black border transition-colors",
+                linked ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-zinc-900 border-zinc-800 text-zinc-500"
+            )}
           >
             {linked ? 'LINKED' : 'UNLINKED'}
           </button>
-        </div>
-        <form
-          className="panel-input flex-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (highlightIdx >= 0 && suggestions[highlightIdx]) {
-              handleSuggestionExecute(suggestions[highlightIdx]);
-            } else {
-              handleGo(command);
-            }
-          }}
-        >
-          <span className="prompt">&gt;</span>
-          <input
-            value={command}
-            onChange={(e) => {
-              setCommand(e.target.value);
-              setShowSuggestions(true);
-              setHighlightIdx(-1);
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
-            onKeyDown={(e) => {
-              if (!showSuggestions || suggestions.length === 0) return;
-              if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setHighlightIdx((i) => (i + 1) % suggestions.length);
-              }
-              if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setHighlightIdx((i) => (i - 1 + suggestions.length) % suggestions.length);
-              }
-              if (e.key === 'Escape') {
-                setShowSuggestions(false);
-                setHighlightIdx(-1);
-              }
-            }}
-            placeholder="Example: AAPL GO  |  RISK GO  |  P2 NEWS GO"
-            className="panel-input-field"
-            autoFocus
-          />
-          <button type="submit" className="bb-button h-7 px-3">GO</button>
-        </form>
-      </div>
-      <div className="hint-line">GO executes · Alt+M toggles MENU · Esc closes overlays · Ctrl+Shift+[ / ] switches panels · Sector key filters ticker context</div>
 
-      {showMenu && (
-        <div className="panel-menu">
-          <div className="menu-header">FUNCTION MENU — ACTIVE PANEL P{activePanel + 1}</div>
-          <div className="menu-grid">
-            {menuItems.map((m) => (
-              <button key={m.id} className="menu-item" onClick={() => handleGo(String(menuItems.indexOf(m) + 1))}>
-                <span className="num-link">{menuItems.indexOf(m) + 1}</span>
-                <span>{m.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="menu-footer">Tip: type the number then GO to jump.</div>
-        </div>
-      )}
-
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="panel-suggestions">
-          {suggestions.map((s, i) => (
-            <button
-              key={s.id}
-              className={cn('suggestion-row', highlightIdx === i && 'active')}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSuggestionExecute(s);
-              }}
-            >
-              <span className="suggestion-label">{s.label}</span>
-              <span className="suggestion-sub">{s.sublabel}</span>
-              <span className="suggestion-type">{s.type}</span>
-            </button>
-          ))}
-          <div className="menu-footer">Arrows to navigate · Enter/GO to run · Esc to close</div>
-        </div>
-      )}
-
-      <div className="panel-grid">
-        {panels.map((panel) => (
-          <div
-            key={panel.id}
-            className={cn('panel-shell', activePanel === panel.id && 'panel-active')}
-            onClick={() => setActivePanel(panel.id)}
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleGo(command); }}
+            className="flex-1 flex items-center bg-[#0a0a0a] border border-[#222] h-7 px-2"
           >
-            <div className="panel-toolbar">
-              <div className="flex items-center space-x-2">
-                <span className="bb-chip">P{panel.id + 1}</span>
-                <span className="toolbar-title">{FUNCTION_REGISTRY[panel.functionId].label}</span>
-                <span className="toolbar-security">{panel.security || 'NO SECURITY LOADED'}</span>
+            <span className="text-amber-500 text-xs mr-2 font-mono">{'>'}</span>
+            <input 
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                placeholder="AAPL GO | RISK GO"
+                className="flex-1 bg-transparent text-xs text-zinc-300 outline-none font-mono"
+            />
+          </form>
+
+          {closedPanels.length > 0 && (
+              <div className="flex gap-1 ml-2">
+                  {closedPanels.map(p => (
+                      <button 
+                        key={p.id} 
+                        onClick={() => openPanel(p.id)}
+                        className="h-7 px-2 bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-500 hover:text-amber-500 uppercase font-bold"
+                      >
+                          +{p.id}
+                      </button>
+                  ))}
               </div>
-              <div className="flex items-center space-x-2 text-[9px] text-[#7a7a7a]">
-                <span className="bb-pill">LINKED</span>
-                <span>STATUS: LIVE</span>
+          )}
+      </div>
+
+      {/* WORKSPACE AREA */}
+      <div ref={workspaceRef} className="flex-1 relative overflow-hidden bg-[#030303]">
+          {/* Subtle grid background */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+               style={{backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '40px 40px'}} />
+          
+          {state.panels.map((panel) => (
+            <DraggablePanel
+              key={panel.id}
+              panel={panel}
+              isActive={state.activePanelId === panel.id}
+              workspaceRef={workspaceRef}
+              onBringToFront={bringToFront}
+              onUpdateBounds={updatePanelBounds}
+              onToggleMaximize={toggleMaximize}
+              onClose={closePanel}
+            >
+              <div className="flex flex-col h-full bg-black/40 backdrop-blur-sm">
+                  {/* Internal panel info bar */}
+                  <div className="flex items-center justify-between px-2 py-1 bg-zinc-900/30 border-b border-zinc-800/50">
+                      <div className="text-[9px] font-mono text-zinc-500">
+                          ID: <span className="text-amber-500/80">{panel.id}</span>
+                          {panelSecurities[panel.id] && (
+                              <> | SEC: <span className="text-zinc-300">{panelSecurities[panel.id]}</span></>
+                          )}
+                      </div>
+                      <div className="text-[8px] text-zinc-600 font-bold uppercase tracking-tighter">STATUS: LIVE</div>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    {renderPanel(panel)}
+                  </div>
               </div>
-            </div>
-            {renderPanel(panel)}
-          </div>
-        ))}
+            </DraggablePanel>
+          ))}
       </div>
     </div>
   );
