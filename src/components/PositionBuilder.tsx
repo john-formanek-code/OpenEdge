@@ -5,9 +5,9 @@ import { Trash, Save, Calculator, AlertTriangle, Droplets } from 'lucide-react';
 import { saveTradePlan } from '@/lib/actions/hypotheses';
 import { toast } from 'sonner';
 
-type EntryStep = { price: number; weight: number; type: 'limit' | 'stop' | 'market' };
-type TargetStep = { price: number; weight: number };
-type TradePlan = {
+export type EntryStep = { price: number; weight: number; type: 'limit' | 'stop' | 'market' };
+export type TargetStep = { price: number; weight: number };
+export type TradePlan = {
   accountSize: number;
   riskValue: number;
   riskUnit: 'percent' | 'fixed_amount';

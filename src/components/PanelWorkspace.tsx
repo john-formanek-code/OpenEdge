@@ -9,20 +9,20 @@ function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-type Hypothesis = {
+export type Hypothesis = {
   id: string;
   symbol: string;
   bias: 'long' | 'short' | 'neutral';
   state?: string | null;
 };
 
-type Cluster = { name: string; exposure: number; rCount?: number };
-type StopLevel = { price: number; risk: number; hypothesisId: string };
-type RiskSummary = { clusters: Cluster[]; stops: StopLevel[] };
-type MarketEvent = { id: string; name: string; impact: string; startTime: string | Date };
-type Equity = { balance: number; drawdown: number };
-type BehavioralStats = Parameters<typeof BehavioralDashboard>[0]['stats'];
-type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
+export type Cluster = { name: string; exposure: number; rCount?: number };
+export type StopLevel = { price: number; risk: number; hypothesisId: string };
+export type RiskSummary = { clusters: Cluster[]; stops: StopLevel[] };
+export type MarketEvent = { id: string; name: string; impact: string; startTime: string | Date };
+export type Equity = { balance: number; drawdown: number };
+export type BehavioralStats = Parameters<typeof BehavioralDashboard>[0]['stats'];
+export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
 type Suggestion = {
   id: string;
   label: string;

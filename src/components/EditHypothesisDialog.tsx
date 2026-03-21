@@ -15,7 +15,14 @@ type HypothesisForm = {
   timeframe: string;
   priority?: number | null;
   confidence?: number | null;
+  status?: string | null;
   triggerCondition?: string | null;
+  entryPlan?: string | null;
+  invalidationLevel?: number | null;
+  stopLoss?: number | null;
+  targets?: string | null;
+  tags?: string | null;
+  nextReviewAt?: Date | null;
 };
 
 export function EditHypothesisDialog({ hypothesis }: { hypothesis: HypothesisForm }) {
@@ -80,7 +87,7 @@ export function EditHypothesisDialog({ hypothesis }: { hypothesis: HypothesisFor
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Status</label>
-              <select name="status" defaultValue={hypothesis.status} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors">
+              <select name="status" defaultValue={hypothesis.status || undefined} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors">
                 <option value="active">Active</option>
                 <option value="parking">Parking Lot</option>
                 <option value="paused">Paused</option>
@@ -100,7 +107,7 @@ export function EditHypothesisDialog({ hypothesis }: { hypothesis: HypothesisFor
             </div>
              <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Exchange</label>
-              <input name="exchange" defaultValue={hypothesis.exchange} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+              <input name="exchange" defaultValue={hypothesis.exchange || undefined} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
             </div>
           </div>
 
@@ -130,42 +137,42 @@ export function EditHypothesisDialog({ hypothesis }: { hypothesis: HypothesisFor
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Priority (1-5)</label>
-              <input name="priority" type="number" min="1" max="5" defaultValue={hypothesis.priority} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+              <input name="priority" type="number" min="1" max="5" defaultValue={hypothesis.priority || undefined} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Confidence (1-5)</label>
-              <input name="confidence" type="number" min="1" max="5" defaultValue={hypothesis.confidence} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+              <input name="confidence" type="number" min="1" max="5" defaultValue={hypothesis.confidence || undefined} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase">Trigger Condition</label>
-            <textarea name="triggerCondition" defaultValue={hypothesis.triggerCondition} rows={2} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+            <textarea name="triggerCondition" defaultValue={hypothesis.triggerCondition || undefined} rows={2} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
           </div>
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase">Entry Plan / Notes</label>
-            <textarea name="entryPlan" defaultValue={hypothesis.entryPlan} rows={2} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+            <textarea name="entryPlan" defaultValue={hypothesis.entryPlan || undefined} rows={2} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Invalidation (Stop)</label>
-              <input name="invalidationLevel" defaultValue={hypothesis.invalidationLevel} type="number" step="any" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors text-red-400 font-mono" />
+              <input name="invalidationLevel" defaultValue={hypothesis.invalidationLevel || undefined} type="number" step="any" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors text-red-400 font-mono" />
             </div>
              <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Stop Loss ($)</label>
-              <input name="stopLoss" defaultValue={hypothesis.stopLoss} type="number" step="any" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors font-mono" />
+              <input name="stopLoss" defaultValue={hypothesis.stopLoss || undefined} type="number" step="any" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors font-mono" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-zinc-500 uppercase">Target ($)</label>
-              <input name="targets" defaultValue={hypothesis.targets} type="text" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors text-green-400 font-mono" />
+              <input name="targets" defaultValue={hypothesis.targets || undefined} type="text" className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors text-green-400 font-mono" />
             </div>
           </div>
           
            <div className="space-y-2">
             <label className="text-xs font-bold text-zinc-500 uppercase">Tags</label>
-            <input name="tags" defaultValue={hypothesis.tags} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
+            <input name="tags" defaultValue={hypothesis.tags || undefined} className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 focus:outline-none focus:border-white transition-colors" />
           </div>
 
           <div className="pt-4 flex justify-end space-x-4">

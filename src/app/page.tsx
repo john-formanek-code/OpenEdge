@@ -1,12 +1,12 @@
 import { getHypotheses, getPortfolioRiskSummary, getMarketEvents, getEquitySummary, getBehavioralStats, getEquityReturns, getLatestMarketState } from "@/lib/actions/hypotheses";
-import { PanelWorkspace } from "@/components/PanelWorkspace";
+import { PanelWorkspace, type Hypothesis, type RiskSummary, type MarketEvent, type MarketStateSummary } from "@/components/PanelWorkspace";
 import { LiveQuoteStrip } from "@/components/LiveQuoteStrip";
 import Link from "next/link";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; search?: string }>;
+  searchParams: Promise<{ view?: string; search?: string; load?: string }>;
 }) {
   const params = await searchParams;
   const view = params.view || "dash"; 
@@ -46,13 +46,13 @@ export default async function Home({
 
       <PanelWorkspace
         key={load || 'default'}
-        watchlist={data}
-        riskSummary={riskSummary}
-        events={events.map((e) => ({ ...e, startTime: e.startTime?.toISOString?.() || e.startTime }))}
+        watchlist={data as unknown as Hypothesis[]}
+        riskSummary={riskSummary as RiskSummary}
+        events={events.map((e) => ({ ...e, startTime: e.startTime?.toISOString?.() || e.startTime })) as unknown as MarketEvent[]}
         equity={equity}
         equityReturns={equityReturns}
         behavior={behavior}
-        marketState={marketState}
+        marketState={marketState as MarketStateSummary}
         initialSecurity={load}
       />
     </div>

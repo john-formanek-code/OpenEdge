@@ -13,7 +13,7 @@ export function StrategyGatingCheck({ onStrategySelect }: { onStrategySelect: (i
   const [checkResult, setCheckResult] = useState<GatingResult | null>(null);
 
   useEffect(() => {
-    getStrategies().then(setStrategies);
+    getStrategies().then(res => setStrategies(res as Strategy[]));
   }, []);
 
   async function handleSelect(id: string) {
@@ -24,7 +24,7 @@ export function StrategyGatingCheck({ onStrategySelect }: { onStrategySelect: (i
       return;
     }
     const result = await checkStrategyGating(id);
-    setCheckResult(result);
+    setCheckResult(result as GatingResult);
   }
 
   return (

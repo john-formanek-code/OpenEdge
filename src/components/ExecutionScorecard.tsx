@@ -2,8 +2,8 @@
 
 import { BarChart3, TrendingDown, Crosshair, Zap } from 'lucide-react';
 
-type Execution = { size: number; price: number; side: 'buy' | 'sell' };
-type Plan = { avgEntryPrice: number };
+export type Execution = { size: number; price: number; side: 'buy' | 'sell' };
+export type Plan = { avgEntryPrice: number };
 
 export function ExecutionScorecard({ executions, plan }: { executions: Execution[], plan: Plan }) {
   if (!executions || executions.length === 0 || !plan || !plan.avgEntryPrice) return null;

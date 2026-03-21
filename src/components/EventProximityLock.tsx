@@ -31,7 +31,7 @@ export function EventProximityLock({ events = [] }: { events: ProximityEvent[] }
     return () => clearInterval(interval);
   }, [events]);
 
-  if (!locked) return null;
+  if (!locked || !nextEvent) return null;
 
   return (
     <div className="bg-orange-950/20 border border-orange-900/50 p-4 rounded-xl mb-8 flex items-center justify-between">

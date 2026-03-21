@@ -6,8 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EditHypothesisDialog } from "@/components/EditHypothesisDialog";
-import { PositionBuilder } from "@/components/PositionBuilder";
-import { ExecutionScorecard } from "@/components/ExecutionScorecard";
+import { PositionBuilder, type TradePlan } from "@/components/PositionBuilder";
+import { ExecutionScorecard, type Execution, type Plan } from "@/components/ExecutionScorecard";
 import { PnLDecomposition } from "@/components/PnLDecomposition";
 import { LogExecutionForm } from "@/components/LogExecutionForm";
 import { AuditLogView } from "@/components/AuditLogView";
@@ -123,14 +123,14 @@ export default async function HypothesisPage({
                   </div>
                   <LogExecutionForm hypothesisId={id} />
                 </div>
-                <PositionBuilder hypothesisId={id} initialPlan={tradePlan} currentExposure={currentExposure} />
+                <PositionBuilder hypothesisId={id} initialPlan={tradePlan as unknown as Partial<TradePlan>} currentExposure={currentExposure} />
               </div>
             )}
 
             {currentTab === 'anal' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
-                  <ExecutionScorecard executions={executions} plan={tradePlan} />
+                  <ExecutionScorecard executions={executions as unknown as Execution[]} plan={tradePlan as unknown as Plan} />
                   <PnLDecomposition pnl={realizedPnL} positionSize={currentExposure || (tradePlan?.totalPositionSize || 0) * (tradePlan?.avgEntryPrice || 0)} />
                 </div>
               </div>
