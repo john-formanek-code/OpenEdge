@@ -1,5 +1,4 @@
-import { getBlotter, getEquitySummary, getBehavioralStats } from "@/lib/actions/hypotheses";
-import { BehavioralDashboard } from "@/components/BehavioralDashboard";
+import { getBlotter, getEquitySummary } from "@/lib/actions/hypotheses";
 
 export default async function BlotterPage({
   searchParams,
@@ -7,10 +6,8 @@ export default async function BlotterPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const params = await searchParams;
-  const isJournal = params.view === 'journal';
   const data = await getBlotter();
   const equity = await getEquitySummary();
-  const behavior = await getBehavioralStats();
 
   return (
     <div className="h-full flex flex-col bg-black">
@@ -18,18 +15,17 @@ export default async function BlotterPage({
       {/* Module Header */}
       <div className="bg-[#111] border-b border-[#333] px-3 py-1 flex items-center justify-between text-[10px] font-bold">
         <div className="flex space-x-4">
-          <span className={!isJournal ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>1. EXEC_BLOTTER</span>
-          <span className={isJournal ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>2. BEHAVIOR_JRNL</span>
+          <span className="text-[var(--terminal-accent)]">EXEC_BLOTTER</span>
         </div>
         <div className="text-zinc-500 font-mono">ACCOUNT_BAL: ${equity.balance.toLocaleString()}</div>
       </div>
 
-      <div className="flex-1 grid grid-cols-12 gap-[1px] bg-[#222] overflow-hidden p-[1px]">
+      <div className="flex-1 bg-[#222] overflow-hidden p-[1px]">
         
         {/* Main Log Area */}
-        <div className={`${isJournal ? 'col-span-8' : 'col-span-12'} bg-black flex flex-col min-h-0`}>
+        <div className="h-full bg-black flex flex-col min-h-0">
           <div className="terminal-header">
-            <span>{isJournal ? 'SYSTEM_JOURNAL' : 'TRANSACTION_LOG'} • N={data.length}</span>
+            <span>TRANSACTION_LOG • N={data.length}</span>
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -65,33 +61,6 @@ export default async function BlotterPage({
             </table>
           </div>
         </div>
-
-        {/* Behavioral Sidebar (Only in JRNL view) */}
-        {isJournal && (
-          <div className="col-span-4 bg-black flex flex-col min-h-0 border-l border-[#333]">
-            <div className="terminal-header">
-              <span>BEHAVIORAL_METRICS</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              <BehavioralDashboard stats={behavior} />
-              
-              <div className="border border-[#222] p-4 bg-[#050505]">
-                <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-2">Rule Violation Log</h4>
-                <div className="space-y-2">
-                  <div className="text-[9px] flex justify-between">
-                    <span className="text-red-500 font-bold">FOMO_ENTRY</span>
-                    <span className="text-zinc-600">14:02 BTC</span>
-                  </div>
-                  <div className="text-[9px] flex justify-between">
-                    <span className="text-orange-500 font-bold">HESITATION</span>
-                    <span className="text-zinc-600">09:15 ETH</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );

@@ -3,8 +3,10 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { PortfolioRiskPanel } from './PortfolioRiskPanel';
 import { SurvivalPanel } from './SurvivalPanel';
-import { BehavioralDashboard } from './BehavioralDashboard';
 import { WatchlistBoard } from './WatchlistBoard';
+import { WorldEquityIndices } from './WorldEquityIndices';
+import { EconomicCalendar } from './EconomicCalendar';
+import { MultiChartGrid } from './TradingViewChart';
 import { DraggablePanel } from './workspace/DraggablePanel';
 import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
 import { PanelState as WorkspacePanelState } from '@/types/workspace';
@@ -25,17 +27,18 @@ export type StopLevel = { price: number; risk: number; hypothesisId: string };
 export type RiskSummary = { clusters: Cluster[]; stops: StopLevel[] };
 export type MarketEvent = { id: string; name: string; impact: string; startTime: string | Date };
 export type Equity = { balance: number; drawdown: number };
-export type BehavioralStats = Parameters<typeof BehavioralDashboard>[0]['stats'];
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
 
-type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'BEHAV' | 'WATCHLIST';
+type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS';
 
 const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: boolean; related: FunctionId[] }> = {
   WATCH: { label: 'Monitor', related: ['RISK', 'NEWS'] },
   RISK: { label: 'Risk Suite', related: ['WATCH', 'NEWS'] },
   NEWS: { label: 'News/Events', related: ['WATCH'] },
-  BEHAV: { label: 'Behavioral', related: ['WATCH', 'RISK'] },
   WATCHLIST: { label: 'Watchlist', related: ['WATCH'] },
+  WEI: { label: 'World Markets', related: ['ECO'] },
+  ECO: { label: 'Economic Calendar', related: ['WEI'] },
+  CHARTS: { label: 'Multi-Charts', related: ['WATCHLIST'] },
 };
 
 const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
@@ -166,7 +169,6 @@ export function PanelWorkspace({
   events,
   equity,
   equityReturns,
-  behavior,
   marketState,
   initialSecurity,
 }: {
@@ -175,7 +177,6 @@ export function PanelWorkspace({
   events: MarketEvent[];
   equity: Equity;
   equityReturns: number[];
-  behavior: BehavioralStats;
   marketState: MarketStateSummary;
   initialSecurity?: string | null;
 }) {
@@ -191,9 +192,6 @@ export function PanelWorkspace({
     addOrOpenPanel,
   } = useWorkspaceLayout(INITIAL_WORKSPACE_PANELS);
 
-  const [sector, setSector] = useState<'EQUITY' | 'CRYPTO' | 'FX'>('EQUITY');
-  const [command, setCommand] = useState('');
-  const [linked, setLinked] = useState(true);
   const [panelSecurities, setPanelSecurities] = useState<Record<string, string>>({
     WATCH: initialSecurity || '',
   });
@@ -201,32 +199,10 @@ export function PanelWorkspace({
   const pushSecurity = useCallback(
     (symbol: string, targetId: string) => {
       const normalized = symbol.toUpperCase();
-      const sec = `${normalized}${sector === 'EQUITY' ? '' : `:${sector}`}`;
-      
-      setPanelSecurities((prev) => {
-        if (linked) {
-            const next: Record<string, string> = {};
-            state.panels.forEach(p => next[p.id] = sec);
-            return next;
-        }
-        return { ...prev, [targetId]: sec };
-      });
+      setPanelSecurities((prev) => ({ ...prev, [targetId]: normalized }));
     },
-    [linked, sector, state.panels]
+    []
   );
-
-  const handleGo = (input: string) => {
-    const tokens = input.trim().toUpperCase().split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return;
-    
-    // Command parsing logic...
-    const tickerToken = tokens.find((t) => /^[A-Z]{1,6}$/.test(t));
-    if (tickerToken) {
-      pushSecurity(tickerToken, state.activePanelId || 'WATCH');
-    }
-    
-    setCommand('');
-  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -274,11 +250,20 @@ export function PanelWorkspace({
         return <RiskPanel riskSummary={riskSummary} equityReturns={equityReturns} equity={equity} />;
       case 'NEWS':
         return <NewsPanel events={events} marketState={marketState} />;
-      case 'BEHAV':
-        return <div className="p-2 h-full"><BehavioralDashboard stats={behavior} /></div>;
       case 'WATCHLIST':
         return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
+      case 'WEI':
+        return <div className="h-full overflow-hidden"><WorldEquityIndices /></div>;
+      case 'ECO':
+        return <div className="h-full overflow-hidden"><EconomicCalendar /></div>;
+      case 'CHARTS':
+        return <div className="h-full overflow-hidden"><MultiChartGrid initialSymbol={panelSecurities[panel.id] || 'BTC'} /></div>;
       default:
+        // Handle cases where panel.id might be the title or something else from drag
+        if (panel.id === 'WATCHLIST') return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
+        if (panel.id === 'WEI') return <div className="h-full overflow-hidden"><WorldEquityIndices /></div>;
+        if (panel.id === 'ECO') return <div className="h-full overflow-hidden"><EconomicCalendar /></div>;
+        if (panel.id === 'CHARTS') return <div className="h-full overflow-hidden"><MultiChartGrid /></div>;
         return null;
     }
   };
@@ -287,58 +272,23 @@ export function PanelWorkspace({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-black">
-      {/* COMMAND BAR */}
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-[#1a1a1a] bg-[#050505] z-50">
-          <div className="flex items-center bg-[#111] border border-[#222] px-2 h-7">
-            <span className="text-[10px] font-black text-amber-500/80 mr-2">SEC</span>
-            <select
-                value={sector}
-                onChange={(e) => setSector(e.target.value as any)}
-                className="bg-transparent text-[10px] text-zinc-300 outline-none"
-            >
-                <option value="EQUITY">EQUITY</option>
-                <option value="CRYPTO">CRYPTO</option>
-                <option value="FX">FX</option>
-            </select>
+      {/* Reopen panels bar - subtle and only shown if panels are closed */}
+      {closedPanels.length > 0 && (
+        <div className="flex items-center gap-2 px-2 py-1 border-b border-[#1a1a1a] bg-[#050505] z-50">
+          <span className="text-[9px] font-black text-zinc-600 uppercase mr-2">Restore:</span>
+          <div className="flex gap-1">
+            {closedPanels.map(p => (
+              <button 
+                key={p.id} 
+                onClick={() => openPanel(p.id)}
+                className="h-6 px-2 bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-400 hover:text-amber-500 uppercase font-bold transition-colors"
+              >
+                +{p.id}
+              </button>
+            ))}
           </div>
-
-          <button
-            onClick={() => setLinked(!linked)}
-            className={cn(
-                "h-7 px-3 text-[10px] font-black border transition-colors",
-                linked ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-zinc-900 border-zinc-800 text-zinc-500"
-            )}
-          >
-            {linked ? 'LINKED' : 'UNLINKED'}
-          </button>
-
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleGo(command); }}
-            className="flex-1 flex items-center bg-[#0a0a0a] border border-[#222] h-7 px-2"
-          >
-            <span className="text-amber-500 text-xs mr-2 font-mono">{'>'}</span>
-            <input 
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                placeholder="AAPL GO | RISK GO"
-                className="flex-1 bg-transparent text-xs text-zinc-300 outline-none font-mono"
-            />
-          </form>
-
-          {closedPanels.length > 0 && (
-              <div className="flex gap-1 ml-2">
-                  {closedPanels.map(p => (
-                      <button 
-                        key={p.id} 
-                        onClick={() => openPanel(p.id)}
-                        className="h-7 px-2 bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-500 hover:text-amber-500 uppercase font-bold"
-                      >
-                          +{p.id}
-                      </button>
-                  ))}
-              </div>
-          )}
-      </div>
+        </div>
+      )}
 
       {/* WORKSPACE AREA */}
       <div 
