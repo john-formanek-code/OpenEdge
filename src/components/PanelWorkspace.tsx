@@ -7,6 +7,7 @@ import { WatchlistBoard } from './WatchlistBoard';
 import { WorldEquityIndices } from './WorldEquityIndices';
 import { EconomicCalendar } from './EconomicCalendar';
 import { MultiChartGrid } from './TradingViewChart';
+import { MarketMovers } from './MarketMovers';
 import { DraggablePanel } from './workspace/DraggablePanel';
 import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
 import { PanelState as WorkspacePanelState } from '@/types/workspace';
@@ -29,7 +30,7 @@ export type MarketEvent = { id: string; name: string; impact: string; startTime:
 export type Equity = { balance: number; drawdown: number };
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
 
-type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS';
+type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS' | 'TOP';
 
 const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: boolean; related: FunctionId[] }> = {
   WATCH: { label: 'Monitor', related: ['RISK', 'NEWS'] },
@@ -39,6 +40,7 @@ const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: b
   WEI: { label: 'World Markets', related: ['ECO'] },
   ECO: { label: 'Economic Calendar', related: ['WEI'] },
   CHARTS: { label: 'Multi-Charts', related: ['WATCHLIST'] },
+  TOP: { label: 'Top Movers', related: ['WATCH'] },
 };
 
 const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
@@ -258,12 +260,15 @@ export function PanelWorkspace({
         return <div className="h-full overflow-hidden"><EconomicCalendar /></div>;
       case 'CHARTS':
         return <div className="h-full overflow-hidden"><MultiChartGrid initialSymbol={panelSecurities[panel.id] || 'BTC'} /></div>;
+      case 'TOP':
+        return <div className="h-full overflow-hidden"><MarketMovers /></div>;
       default:
         // Handle cases where panel.id might be the title or something else from drag
         if (panel.id === 'WATCHLIST') return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
         if (panel.id === 'WEI') return <div className="h-full overflow-hidden"><WorldEquityIndices /></div>;
         if (panel.id === 'ECO') return <div className="h-full overflow-hidden"><EconomicCalendar /></div>;
         if (panel.id === 'CHARTS') return <div className="h-full overflow-hidden"><MultiChartGrid /></div>;
+        if (panel.id === 'TOP') return <div className="h-full overflow-hidden"><MarketMovers /></div>;
         return null;
     }
   };

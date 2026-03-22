@@ -30,8 +30,8 @@ export default async function Home({
           { key: 'F4', label: 'Eco Calendar', href: '#', active: false, panelId: 'ECO' },
           { key: 'F5', label: 'Watchlist', href: '/watch', active: false, panelId: 'WATCHLIST' },
           { key: 'F6', label: 'Charts', href: '#', active: false, panelId: 'CHARTS' },
-          { key: 'F7', label: 'Execution', href: '/blotter', active: false },
-          { key: 'F8', label: 'System', href: '/settings', active: false },
+          { key: 'F7', label: 'Top Movers', href: '#', active: false, panelId: 'TOP' },
+          { key: 'F8', label: 'Execution', href: '/blotter', active: false },
         ].map((item) => (
           <FunctionKey key={item.key} item={item} />
         ))}
