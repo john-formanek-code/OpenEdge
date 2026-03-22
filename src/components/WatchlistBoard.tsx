@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTerminal } from './TerminalContext';
 
 type Quote = {
   symbol: string;
@@ -55,6 +56,7 @@ const DEFAULT_SYMBOLS = [
 const STORAGE_KEY = 'trade_os_watchlist_symbols';
 
 export function WatchlistBoard() {
+  const { setFocusedTicker } = useTerminal();
   const [symbols, setSymbols] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [newSymbol, setNewSymbol] = useState('');
@@ -216,7 +218,12 @@ export function WatchlistBoard() {
           · showing {filtered.length}/{quotes.length} instruments.
         </div>
 
-        {error && <div className="text-[10px] text-[var(--bb-red)] mb-2 font-mono uppercase">{error}</div>}
+        {error && <div className="text-[10px] text-[var(--bb-red)] mb-2 font-mono uppercase">Error: {error}</div>}
+        {!loading && quotes.length === 0 && symbols.length > 0 && (
+          <div className="text-[9px] text-amber-500/70 mb-2 font-mono uppercase bg-amber-500/5 px-2 py-1 border border-amber-500/20">
+            ⚠ External feed (Stooq) connectivity issue. Data may be stale or unavailable.
+          </div>
+        )}
         {loading && <div className="text-[10px] text-[#888] mb-2 font-mono uppercase animate-pulse">Fetching live data...</div>}
 
         <div className="flex-1 overflow-auto custom-scrollbar">
@@ -242,7 +249,10 @@ export function WatchlistBoard() {
                     <tr
                       key={q.symbol}
                       className={`bb-row cursor-pointer ${selected?.symbol === q.symbol ? 'bg-zinc-900/50' : ''}`}
-                      onClick={() => setSelected(q)}
+                      onClick={() => {
+                        setSelected(q);
+                        setFocusedTicker(q.symbol);
+                      }}
                     >
                       <td className="font-bold text-[var(--bb-amber)]">{q.symbol}</td>
                       <td className="text-right font-mono text-zinc-200">{(q.last ?? 0).toFixed(2)}</td>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/utils';
 
 type Quote = {
   symbol: string;
@@ -48,41 +49,87 @@ const COINGECKO_MAP: Record<string, string | string[]> = {
 
 const normalizeSymbol = (s: string) => s.trim().toUpperCase().replace('/', '-');
 
-async function fetchEquity(symbol: string): Promise<Quote | null> {
+async function fetchYahooFinance(symbol: string): Promise<Quote | null> {
   try {
-    const formatted = symbol.toLowerCase().endsWith('.us') ? symbol.toLowerCase() : `${symbol.toLowerCase()}.us`;
-    const url = `https://stooq.pl/q/l/?s=${formatted}&f=sd2t2ohlcv&h&e=json`;
-    const res = await fetch(url, { cache: 'no-store' });
+    let yfSymbol = symbol.toUpperCase();
+    // Map common index symbols to Yahoo format
+    const mapping: Record<string, string> = {
+      '^SPX': '^GSPC',
+      '^NDQ': '^IXIC',
+      '^DJI': '^DJI',
+      '^RUT': '^RTY',
+      '^VIX': '^VIX',
+      '^DAX': '^GDAXI',
+      '^FTSE': '^FTSE',
+      'BTC': 'BTC-USD',
+      'ETH': 'ETH-USD'
+    };
+    yfSymbol = mapping[yfSymbol] || yfSymbol;
+
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yfSymbol}`;
+    const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!res.ok) return null;
-    const raw = await res.text();
+    
+    const data = await res.json();
+    const result = data?.quoteResponse?.result?.[0];
+    
+    if (!result) return null;
 
-    let json: { symbols?: { close: number; open: number; high: number; low: number; volume: number }[] } | null = null;
-    try {
-      json = JSON.parse(raw);
-    } catch {
-      // stooq sometimes responds with a plain-text rate-limit message; treat as unavailable
-      return null;
-    }
-
-    const first = json?.symbols?.[0];
-    if (!first || !first.close || Number.isNaN(first.close)) return null;
-    const change = first.close - first.open;
-    const changePct = first.open ? (change / first.open) * 100 : 0;
     return {
       symbol: symbol.toUpperCase(),
-      last: Number(first.close),
-      change,
-      changePct,
-      open: Number(first.open),
-      high: Number(first.high),
-      low: Number(first.low),
-      volume: Number(first.volume),
-      assetClass: 'equity',
-      source: 'stooq',
+      last: result.regularMarketPrice,
+      change: result.regularMarketChange,
+      changePct: result.regularMarketChangePercent,
+      open: result.regularMarketOpen,
+      high: result.regularMarketDayHigh,
+      low: result.regularMarketDayLow,
+      volume: result.regularMarketVolume,
+      marketCap: result.marketCap,
+      assetClass: symbol.includes('-') ? 'crypto' : 'equity',
+      source: 'stooq', // label as stooq for compatibility with existing UI logic if needed, but actually YF
     };
-  } catch {
+  } catch (err) {
+    console.error(`Yahoo Finance error for ${symbol}:`, err);
     return null;
   }
+}
+
+async function fetchEquity(symbol: string): Promise<Quote | null> {
+  // Try Stooq first (existing)
+  try {
+    let formatted = symbol.toLowerCase();
+    if (!formatted.startsWith('^') && !formatted.endsWith('.us')) {
+      formatted = `${formatted}.us`;
+    }
+    const url = `https://stooq.pl/q/l/?s=${formatted}&f=sd2t2ohlcv&h&e=json`;
+    
+    const res = await fetchWithTimeout(url, { cache: 'no-store', timeout: 3000 });
+    if (res.ok) {
+      const raw = await res.text();
+      const json = JSON.parse(raw);
+      const first = json?.symbols?.[0];
+      if (first && first.close) {
+        const change = first.close - first.open;
+        return {
+          symbol: symbol.toUpperCase(),
+          last: Number(first.close),
+          change,
+          changePct: first.open ? (change / first.open) * 100 : 0,
+          open: Number(first.open),
+          high: Number(first.high),
+          low: Number(first.low),
+          volume: Number(first.volume),
+          assetClass: 'equity',
+          source: 'stooq',
+        };
+      }
+    }
+  } catch (e) {
+    // Silently fail to fallback
+  }
+
+  // Fallback to Yahoo Finance
+  return await fetchYahooFinance(symbol);
 }
 
 type BatchMap = { symbol: string; ids: string[] };

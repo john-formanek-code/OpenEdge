@@ -8,9 +8,17 @@ import { WorldEquityIndices } from './WorldEquityIndices';
 import { EconomicCalendar } from './EconomicCalendar';
 import { MultiChartGrid } from './TradingViewChart';
 import { MarketMovers } from './MarketMovers';
+import { MarketHeatmap } from './MarketHeatmap';
+import { NewsTerminal } from './NewsTerminal';
+import { YieldCurve } from './YieldCurve';
+import { PositionBuilder } from './PositionBuilder';
+import { OptionsFlow } from './OptionsFlow';
+import { NotificationCenter } from './NotificationCenter';
+import { NewHypothesisDialog } from './NewHypothesisDialog';
 import { DraggablePanel } from './workspace/DraggablePanel';
 import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
 import { PanelState as WorkspacePanelState } from '@/types/workspace';
+import { useTerminal } from './TerminalContext';
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -29,18 +37,22 @@ export type RiskSummary = { clusters: Cluster[]; stops: StopLevel[] };
 export type MarketEvent = { id: string; name: string; impact: string; startTime: string | Date };
 export type Equity = { balance: number; drawdown: number };
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
-
-type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS' | 'TOP';
+type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS' | 'TOP' | 'CURV' | 'HEAT' | 'POSB' | 'OFLOW' | 'ALRT';
 
 const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: boolean; related: FunctionId[] }> = {
   WATCH: { label: 'Monitor', related: ['RISK', 'NEWS'] },
   RISK: { label: 'Risk Suite', related: ['WATCH', 'NEWS'] },
-  NEWS: { label: 'News/Events', related: ['WATCH'] },
+  NEWS: { label: 'News Terminal', related: ['WATCH'] },
   WATCHLIST: { label: 'Watchlist', related: ['WATCH'] },
   WEI: { label: 'World Markets', related: ['ECO'] },
   ECO: { label: 'Economic Calendar', related: ['WEI'] },
   CHARTS: { label: 'Multi-Charts', related: ['WATCHLIST'] },
   TOP: { label: 'Top Movers', related: ['WATCH'] },
+  CURV: { label: 'Fixed Income', related: ['WEI'] },
+  HEAT: { label: 'Market Heatmap', related: ['TOP'] },
+  POSB: { label: 'Position Builder', related: ['RISK'] },
+  OFLOW: { label: 'Options Flow', related: ['CHARTS'] },
+  ALRT: { label: 'Alert Center', related: ['NEWS'] },
 };
 
 const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
@@ -80,31 +92,83 @@ const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
 ];
 
 function WatchPanel({ data, security, onSelect }: { data: Hypothesis[]; security?: string; onSelect: (symbol: string) => void }) {
+  const { setFocusedTicker } = useTerminal();
+  const [quotes, setQuotes] = useState<Record<string, { last: number; changePct: number }>>({});
+  const [feedOk, setFeedOk] = useState(true);
   const rows = security ? data.filter((d) => d.symbol === security) : data;
+
+  useEffect(() => {
+    async function fetchWatchQuotes() {
+      const symbols = Array.from(new Set(data.map(h => h.symbol))).join(',');
+      if (!symbols) return;
+      try {
+        const res = await fetch(`/api/quotes?symbols=${symbols}`);
+        if (res.ok) {
+          const json = await res.json();
+          const map: Record<string, any> = {};
+          json.quotes.forEach((q: any) => { map[q.symbol] = q; });
+          setQuotes(map);
+          setFeedOk(json.quotes.length > 0 || symbols.split(',').length === 0);
+        } else {
+          setFeedOk(false);
+        }
+      } catch (e) { 
+        console.error(e); 
+        setFeedOk(false);
+      }
+    }
+    fetchWatchQuotes();
+    const id = setInterval(fetchWatchQuotes, 15000);
+    return () => clearInterval(id);
+  }, [data]);
+
   return (
-    <div className="p-2 h-full overflow-auto">
+    <div className="p-2 h-full overflow-auto custom-scrollbar">
+      {!feedOk && (
+        <div className="text-[8px] text-amber-500/60 font-bold uppercase mb-2 border border-amber-500/20 px-1 py-0.5">
+          ⚠ Market Data Feed Connectivity Unstable
+        </div>
+      )}
       <table className="w-full text-[11px] font-mono border-collapse">
         <thead>
-          <tr className="text-[#666] border-b border-[#222] text-left">
+          <tr className="text-[#666] border-b border-[#222] text-left uppercase">
             <th className="pb-1">Ticker</th>
-            <th className="pb-1">Bias</th>
+            <th className="pb-1 text-right">Price</th>
+            <th className="pb-1 text-right">Chg%</th>
+            <th className="pb-1 text-center">Bias</th>
             <th className="pb-1 text-right">State</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((item) => (
-            <tr
-              key={item.id}
-              className="border-b border-[#111] cursor-pointer hover:bg-[#0f0f0f]"
-              onClick={() => onSelect(item.symbol)}
-            >
-              <td className="py-1 font-bold text-[var(--bb-amber)]">{item.symbol}</td>
-              <td className={cn("py-1", item.bias === 'long' ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]')}>
-                {item.bias.toUpperCase()}
-              </td>
-              <td className="py-1 text-right text-[#888]">{item.state?.slice(0, 3) || '---'}</td>
-            </tr>
-          ))}
+          {rows.map((item) => {
+            const quote = quotes[item.symbol.toUpperCase()];
+            return (
+              <tr
+                key={item.id}
+                className="border-b border-[#111] cursor-pointer hover:bg-[#0f0f0f] transition-colors"
+                onClick={() => {
+                  onSelect(item.symbol);
+                  setFocusedTicker(item.symbol);
+                }}
+              >
+                <td className="py-1.5 font-bold text-[var(--bb-amber)]">{item.symbol}</td>
+                <td className="py-1.5 text-right text-zinc-100">{quote?.last?.toFixed(2) || '—'}</td>
+                <td className={`py-1.5 text-right font-bold ${(quote?.changePct || 0) >= 0 ? 'text-[var(--bb-green)]' : 'text-[var(--bb-red)]'}`}>
+                  {quote ? `${(quote.changePct > 0 ? '+' : '')}${quote.changePct.toFixed(2)}%` : '—'}
+                </td>
+                <td className="py-1.5 text-center">
+                  <span className={cn(
+                    "px-1 py-0.5 text-[9px] font-black rounded-[2px] border",
+                    item.bias === 'long' ? 'bg-green-500/10 border-green-500/50 text-green-500' : 
+                    item.bias === 'short' ? 'bg-red-500/10 border-red-500/50 text-red-500' : 'bg-zinc-800 border-zinc-700 text-zinc-500'
+                  )}>
+                    {item.bias.toUpperCase()}
+                  </span>
+                </td>
+                <td className="py-1.5 text-right text-[#888]">{item.state?.slice(0, 3) || '---'}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -182,6 +246,7 @@ export function PanelWorkspace({
   marketState: MarketStateSummary;
   initialSecurity?: string | null;
 }) {
+  const { focusedTicker } = useTerminal();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const {
     state,
@@ -251,7 +316,7 @@ export function PanelWorkspace({
       case 'RISK':
         return <RiskPanel riskSummary={riskSummary} equityReturns={equityReturns} equity={equity} />;
       case 'NEWS':
-        return <NewsPanel events={events} marketState={marketState} />;
+        return <div className="h-full overflow-hidden"><NewsTerminal /></div>;
       case 'WATCHLIST':
         return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
       case 'WEI':
@@ -262,6 +327,16 @@ export function PanelWorkspace({
         return <div className="h-full overflow-hidden"><MultiChartGrid initialSymbol={panelSecurities[panel.id] || 'BTC'} /></div>;
       case 'TOP':
         return <div className="h-full overflow-hidden"><MarketMovers /></div>;
+      case 'CURV':
+        return <div className="h-full overflow-hidden"><YieldCurve /></div>;
+      case 'HEAT':
+        return <div className="h-full overflow-hidden"><MarketHeatmap /></div>;
+      case 'POSB':
+        return <div className="h-full overflow-hidden"><PositionBuilder hypothesisId="new" initialPlan={{ symbol: focusedTicker || 'BTC' }} /></div>;
+      case 'OFLOW':
+        return <div className="h-full overflow-hidden"><OptionsFlow /></div>;
+      case 'ALRT':
+        return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
       default:
         // Handle cases where panel.id might be the title or something else from drag
         if (panel.id === 'WATCHLIST') return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
@@ -269,6 +344,12 @@ export function PanelWorkspace({
         if (panel.id === 'ECO') return <div className="h-full overflow-hidden"><EconomicCalendar /></div>;
         if (panel.id === 'CHARTS') return <div className="h-full overflow-hidden"><MultiChartGrid /></div>;
         if (panel.id === 'TOP') return <div className="h-full overflow-hidden"><MarketMovers /></div>;
+        if (panel.id === 'CURV') return <div className="h-full overflow-hidden"><YieldCurve /></div>;
+        if (panel.id === 'HEAT') return <div className="h-full overflow-hidden"><MarketHeatmap /></div>;
+        if (panel.id === 'POSB') return <div className="h-full overflow-hidden"><PositionBuilder hypothesisId="new" initialPlan={{ symbol: focusedTicker || 'BTC' }} /></div>;
+        if (panel.id === 'OFLOW') return <div className="h-full overflow-hidden"><OptionsFlow /></div>;
+        if (panel.id === 'ALRT') return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
+        if (panel.id === 'NEWS') return <div className="h-full overflow-hidden"><NewsTerminal /></div>;
         return null;
     }
   };
@@ -277,23 +358,32 @@ export function PanelWorkspace({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-black">
-      {/* Reopen panels bar - subtle and only shown if panels are closed */}
-      {closedPanels.length > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1 border-b border-[#1a1a1a] bg-[#050505] z-50">
-          <span className="text-[9px] font-black text-zinc-600 uppercase mr-2">Restore:</span>
-          <div className="flex gap-1">
-            {closedPanels.map(p => (
-              <button 
-                key={p.id} 
-                onClick={() => openPanel(p.id)}
-                className="h-6 px-2 bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-400 hover:text-amber-500 uppercase font-bold transition-colors"
-              >
-                +{p.id}
-              </button>
-            ))}
-          </div>
+      {/* COMMAND BAR UPGRADE: Added New Hypothesis and Restore */}
+      <div className="flex items-center justify-between px-2 py-1 border-b border-[#1a1a1a] bg-[#050505] z-50">
+        <div className="flex items-center gap-2">
+          <NewHypothesisDialog />
+          <div className="h-4 w-px bg-zinc-800 mx-1" />
+          {closedPanels.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-black text-zinc-600 uppercase mr-1">Restore:</span>
+              {closedPanels.map(p => (
+                <button 
+                  key={p.id} 
+                  onClick={() => openPanel(p.id)}
+                  className="h-6 px-2 bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-400 hover:text-amber-500 uppercase font-bold transition-colors"
+                >
+                  +{p.id}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+        
+        <div className="text-[9px] font-mono text-zinc-600 uppercase flex gap-4">
+           <span>Session: <span className="text-green-500">Active</span></span>
+           <span>Mode: <span className="text-amber-500">Institutional</span></span>
+        </div>
+      </div>
 
       {/* WORKSPACE AREA */}
       <div 

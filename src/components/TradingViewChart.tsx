@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useTerminal } from './TerminalContext';
 
 interface TradingViewChartProps {
   symbol: string;
@@ -22,30 +23,52 @@ export function TradingViewChart({ symbol, theme = 'dark' }: TradingViewChartPro
     script.async = true;
     script.onload = () => {
       if (containerRef.current && window.TradingView) {
+        let tvSymbol = symbol.toUpperCase();
+        
+        // Intelligent mapping
+        if (!tvSymbol.includes(':')) {
+          const cryptoPairs = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'MATIC', 'SUI', 'PEPE', 'TAO'];
+          const baseSym = tvSymbol.replace('-USD', '').replace('USDT', '');
+          
+          if (cryptoPairs.includes(baseSym)) {
+            tvSymbol = `BINANCE:${baseSym}USDT`;
+          } else if (tvSymbol.startsWith('^')) {
+            // Indices from Stooq to TV mapping (rough)
+            const indexMap: Record<string, string> = {
+              '^SPX': 'S&P:SPX',
+              '^DJI': 'DJI:DJI',
+              '^NDQ': 'NASDAQ:IXIC',
+              '^DAX': 'XETR:DAX',
+              '^UKX': 'INDEX:UKX'
+            };
+            tvSymbol = indexMap[tvSymbol] || tvSymbol;
+          } else {
+            // Assume US Equity
+            tvSymbol = `NASDAQ:${tvSymbol}`;
+          }
+        }
+
         new window.TradingView.widget({
           autosize: true,
-          symbol: symbol.includes(':') ? symbol : `BINANCE:${symbol}USDT`,
+          symbol: tvSymbol,
           interval: 'D',
           timezone: 'Etc/UTC',
           theme: theme,
           style: '1',
           locale: 'en',
-          toolbar_bg: '#f1f3f6',
+          toolbar_bg: '#000000',
           enable_publishing: false,
-          hide_top_toolbar: false,
+          hide_side_toolbar: false,
           allow_symbol_change: true,
           container_id: containerRef.current.id,
-          // Custom styles to match Bloomberg look
           backgroundColor: '#000000',
           gridColor: '#1a1a1a',
+          hide_top_toolbar: false,
+          save_image: false,
         });
       }
     };
     document.head.appendChild(script);
-
-    return () => {
-      // Cleanup script if needed, though usually fine to keep
-    };
   }, [symbol, theme]);
 
   // Unique ID for each widget instance in the grid
@@ -91,8 +114,20 @@ const LAYOUTS = [
 ];
 
 export function MultiChartGrid({ initialSymbol = 'BTC' }: { initialSymbol?: string }) {
+  const { focusedTicker } = useTerminal();
   const [layout, setLayout] = useState(LAYOUTS[0]);
   const [symbols, setSymbols] = useState<string[]>(Array(16).fill(initialSymbol));
+
+  // Sync first chart with global focused ticker
+  useEffect(() => {
+    if (focusedTicker) {
+      setSymbols(prev => {
+        const next = [...prev];
+        next[0] = focusedTicker;
+        return next;
+      });
+    }
+  }, [focusedTicker]);
 
   const renderCharts = () => {
     const count = layout.type === 'grid' ? (layout.cols as number) * (layout.rows as number) : layout.count;

@@ -3,6 +3,8 @@ import { Geist_Mono } from "next/font/google"; // Only Mono needed now
 import "./globals.css";
 import { TerminalHeader } from "@/components/TerminalHeader";
 import { TerminalFooter } from "@/components/TerminalFooter";
+import { TerminalProvider } from "@/components/TerminalContext";
+import { BreakingNewsTicker } from "@/components/BreakingNewsTicker";
 import { Toaster } from 'sonner';
 
 const geistMono = Geist_Mono({
@@ -25,12 +27,15 @@ export default function RootLayout({
       <body
         className={`${geistMono.variable} antialiased bg-[var(--terminal-bg)] text-[var(--terminal-fg)] h-screen flex flex-col overflow-hidden`}
       >
-        <TerminalHeader />
-        <main className="flex-1 overflow-hidden relative">
-          {children}
-        </main>
-        <TerminalFooter />
-        <Toaster theme="dark" position="bottom-right" className="font-mono text-xs uppercase" />
+        <TerminalProvider>
+          <TerminalHeader />
+          <BreakingNewsTicker />
+          <main className="flex-1 overflow-hidden relative">
+            {children}
+          </main>
+          <TerminalFooter />
+          <Toaster theme="dark" position="bottom-right" className="font-mono text-xs uppercase" />
+        </TerminalProvider>
       </body>
     </html>
   );

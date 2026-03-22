@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTerminal } from './TerminalContext';
 
 export function TerminalHeader() {
   const router = useRouter();
+  const { setFocusedTicker } = useTerminal();
   const [command, setCommand] = useState('');
   const [nyTime, setNyTime] = useState('—:—:—');
   const [ldnTime, setLdnTime] = useState('—:—:—');
@@ -78,9 +80,15 @@ export function TerminalHeader() {
       case 'LAB': router.push('/lab'); break;
       case 'JRNL': router.push('/blotter?view=journal'); break;
       case 'WATCH': router.push('/watch'); break;
+      case 'HEAT': router.push('/?search=HEAT'); break; // Logic to trigger panel open via URL or state
+      case 'ECO': router.push('/?search=ECO'); break;
       case 'SET': router.push('/settings'); break;
       case 'HELP': router.push('/help'); break;
-      default: if (prefix.length > 0) router.push(`/?search=${prefix}`);
+      default: 
+        if (prefix.length > 0) {
+          setFocusedTicker(prefix);
+          router.push(`/?search=${prefix}`);
+        }
     }
     setCommand('');
   };

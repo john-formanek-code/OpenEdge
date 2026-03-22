@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type EcoEvent = {
   time: string;
@@ -11,23 +11,35 @@ type EcoEvent = {
   revised?: string;
 };
 
-const CALENDAR_DATA: EcoEvent[] = [
-  { time: '04:00', country: 'EU', indicator: 'ECB President Lagarde Speaks', impact: 'HIGH', actual: '', forecast: '', previous: '' },
-  { time: '08:30', country: 'US', indicator: 'Core PCE Price Index (MoM) (Feb)', impact: 'HIGH', actual: '0.3%', forecast: '0.3%', previous: '0.4%', revised: '0.5%' },
-  { time: '08:30', country: 'US', indicator: 'PCE Price Index (YoY) (Feb)', impact: 'HIGH', actual: '2.5%', forecast: '2.5%', previous: '2.4%' },
-  { time: '08:30', country: 'US', indicator: 'Personal Income (MoM) (Feb)', impact: 'MED', actual: '0.3%', forecast: '0.4%', previous: '1.0%' },
-  { time: '08:30', country: 'US', indicator: 'Personal Spending (MoM) (Feb)', impact: 'MED', actual: '0.8%', forecast: '0.5%', previous: '0.2%' },
-  { time: '08:30', country: 'US', indicator: 'Initial Jobless Claims', impact: 'HIGH', actual: '210K', forecast: '212K', previous: '210K' },
-  { time: '09:45', country: 'US', indicator: 'Chicago PMI (Mar)', impact: 'MED', actual: '41.4', forecast: '46.0', previous: '44.0' },
-  { time: '10:00', country: 'US', indicator: 'Pending Home Sales (MoM) (Feb)', impact: 'MED', actual: '1.6%', forecast: '1.5%', previous: '-4.9%' },
-  { time: '10:00', country: 'US', indicator: 'UoM Consumer Sentiment (Mar)', impact: 'HIGH', actual: '79.4', forecast: '76.5', previous: '76.9' },
-  { time: '13:00', country: 'US', indicator: 'Baker Hughes Rig Count', impact: 'LOW', actual: '620', forecast: '', previous: '624' },
-];
-
 export function EconomicCalendar() {
   const [filter, setFilter] = useState<'ALL' | 'HIGH'>('ALL');
+  const [calendarData, setCalendarData] = useState<EcoEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredData = CALENDAR_DATA.filter((e) => filter === 'ALL' || e.impact === 'HIGH');
+  useEffect(() => {
+    async function fetchCalendar() {
+      try {
+        const res = await fetch('/api/calendar');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.events) setCalendarData(data.events);
+        }
+      } catch (e) {
+        console.error('Failed to fetch calendar', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCalendar();
+    const intervalId = setInterval(fetchCalendar, 300000); // 5 minutes
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const filteredData = calendarData.filter((e) => filter === 'ALL' || e.impact === 'HIGH');
+
+  if (loading && calendarData.length === 0) {
+    return <div className="h-full flex items-center justify-center bg-black text-zinc-500 font-mono text-xs uppercase animate-pulse">Loading Macro Data...</div>;
+  }
 
   return (
     <div className="h-full flex flex-col bg-black overflow-hidden p-2">

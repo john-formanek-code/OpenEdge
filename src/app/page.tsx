@@ -31,7 +31,11 @@ export default async function Home({
           { key: 'F5', label: 'Watchlist', href: '/watch', active: false, panelId: 'WATCHLIST' },
           { key: 'F6', label: 'Charts', href: '#', active: false, panelId: 'CHARTS' },
           { key: 'F7', label: 'Top Movers', href: '#', active: false, panelId: 'TOP' },
-          { key: 'F8', label: 'Execution', href: '/blotter', active: false },
+          { key: 'F8', label: 'Pos Builder', href: '#', active: false, panelId: 'POSB' },
+          { key: 'F9', label: 'News', href: '#', active: false, panelId: 'NEWS' },
+          { key: 'F10', label: 'Curve', href: '#', active: false, panelId: 'CURV' },
+          { key: 'F11', label: 'Heatmap', href: '#', active: false, panelId: 'HEAT' },
+          { key: 'F12', label: 'Alerts', href: '#', active: false, panelId: 'ALRT' },
         ].map((item) => (
           <FunctionKey key={item.key} item={item} />
         ))}
