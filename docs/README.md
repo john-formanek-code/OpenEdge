@@ -26,10 +26,10 @@ App runs at `http://localhost:2500`.
 
 Set these in Vercel Project Settings:
 
-- `AUTH_SECRET` (required): long random secret used to sign session JWTs.
-- `AUTH_PASSWORD` (required): login password for the protected app.
 - `DATABASE_URL` (required): use a managed libSQL/Turso URL in production (for example `libsql://...`).
 - `DATABASE_AUTH_TOKEN` (optional): needed for authenticated managed libSQL/Turso instances.
+- `AUTH_SECRET` (optional): only needed if password auth is enabled.
+- `AUTH_PASSWORD` (optional): only needed if password auth is enabled.
 
 ## Deploy on Vercel
 

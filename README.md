@@ -21,12 +21,12 @@ App runs on `http://localhost:2500`.
 See `.env.example`.
 
 Required for production:
-- `AUTH_SECRET`
-- `AUTH_PASSWORD`
 - `DATABASE_URL`
 
 Optional:
 - `DATABASE_AUTH_TOKEN`
+- `AUTH_SECRET` (only if you enable password auth)
+- `AUTH_PASSWORD` (only if you enable password auth)
 
 ## Deploy to Vercel
 1. Push this repo to GitHub.
