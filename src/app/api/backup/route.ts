@@ -21,7 +21,7 @@ export async function GET() {
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/x-sqlite3',
-        'Content-Disposition': 'attachment; filename="trade-os-backup.db"',
+        'Content-Disposition': 'attachment; filename="openedge-backup.db"',
       },
     });
   } catch {

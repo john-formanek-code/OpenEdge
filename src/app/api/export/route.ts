@@ -17,7 +17,7 @@ export async function GET() {
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': 'attachment; filename="trade-os-export.json"',
+        'Content-Disposition': 'attachment; filename="openedge-export.json"',
       },
     });
   } catch {

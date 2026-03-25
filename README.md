@@ -1,4 +1,4 @@
-# Trade Assistant
+# OpenEdge
 
 Trading workspace app built with Next.js App Router, React 19, and Drizzle ORM.
 

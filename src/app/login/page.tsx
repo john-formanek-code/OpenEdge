@@ -13,7 +13,7 @@ export default function LoginPage() {
           <div className="bg-zinc-900 p-4 rounded-full mb-4 border border-zinc-800">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Trade OS Protected</h1>
+          <h1 className="text-2xl font-bold tracking-tight">OpenEdge Protected</h1>
           <p className="text-zinc-400 mt-2">Enter your password to access the terminal.</p>
         </div>
 

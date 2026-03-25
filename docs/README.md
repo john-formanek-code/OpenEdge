@@ -1,4 +1,4 @@
-# Trade Assistant
+# OpenEdge
 
 ## Local development
 

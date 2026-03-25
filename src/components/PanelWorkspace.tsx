@@ -273,7 +273,7 @@ export function PanelWorkspace({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const dragData = e.dataTransfer.getData('application/trade-os-panel');
+    const dragData = e.dataTransfer.getData('application/openedge-panel');
     if (!dragData) return;
 
     try {

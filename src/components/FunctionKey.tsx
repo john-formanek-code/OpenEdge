@@ -20,7 +20,7 @@ export function FunctionKey({ item }: FunctionKeyProps) {
       id: item.panelId || item.label.toUpperCase().replace(/\s/g, '_'),
       title: item.label,
     };
-    e.dataTransfer.setData('application/trade-os-panel', JSON.stringify(dragData));
+    e.dataTransfer.setData('application/openedge-panel', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'copy';
     
     // Optional: set a drag image or cursor
