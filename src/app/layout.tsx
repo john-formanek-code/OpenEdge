@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TRADE_OS | TERMINAL",
-  description: "Institutional Execution Platform",
+  title: "OpenEdge",
+  description: "Open-source trading research terminal",
 };
 
 export default function RootLayout({

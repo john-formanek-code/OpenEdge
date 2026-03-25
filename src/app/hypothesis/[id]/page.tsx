@@ -43,7 +43,7 @@ export default async function HypothesisPage({
       {/* Symbol Header Strip */}
       <div className="bg-[#111] border-b border-[#333] px-3 py-2 flex items-center justify-between shadow-2xl">
         <div className="flex items-center space-x-6">
-          <Link href="/" className="text-zinc-600 hover:text-white transition-colors">
+          <Link href="/terminal" className="text-zinc-600 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="flex items-baseline space-x-3">

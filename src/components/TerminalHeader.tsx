@@ -67,7 +67,7 @@ export function TerminalHeader() {
     const arg = parts[1];
 
     switch (prefix) {
-      case 'DASH': router.push('/'); break;
+      case 'DASH': router.push('/terminal'); break;
       case 'OMS':
         if (arg) {
           router.push(`/hypothesis/${arg}?tab=oms`);
@@ -75,19 +75,19 @@ export function TerminalHeader() {
           router.push('/blotter');
         }
         break;
-      case 'RISK': router.push('/?view=risk'); break;
+      case 'RISK': router.push('/terminal?view=risk'); break;
       case 'ANAL': router.push('/lab?tab=performance'); break;
       case 'LAB': router.push('/lab'); break;
       case 'JRNL': router.push('/blotter?view=journal'); break;
       case 'WATCH': router.push('/watch'); break;
-      case 'HEAT': router.push('/?search=HEAT'); break; // Logic to trigger panel open via URL or state
-      case 'ECO': router.push('/?search=ECO'); break;
+      case 'HEAT': router.push('/terminal?search=HEAT'); break; // Logic to trigger panel open via URL or state
+      case 'ECO': router.push('/terminal?search=ECO'); break;
       case 'SET': router.push('/settings'); break;
       case 'HELP': router.push('/help'); break;
       default: 
         if (prefix.length > 0) {
           setFocusedTicker(prefix);
-          router.push(`/?search=${prefix}`);
+          router.push(`/terminal?search=${prefix}`);
         }
     }
     setCommand('');

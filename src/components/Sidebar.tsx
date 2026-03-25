@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { Home, LayoutDashboard, Inbox, Archive, BarChart3, Settings, FlaskConical, Receipt } from 'lucide-react';
 
 const navItems = [
-  { name: 'Today Focus', href: '/?view=today', icon: Home },
-  { name: 'Active', href: '/?view=active', icon: LayoutDashboard },
+  { name: 'Today Focus', href: '/terminal?view=today', icon: Home },
+  { name: 'Active', href: '/terminal?view=active', icon: LayoutDashboard },
   { name: 'Blotter', href: '/blotter', icon: Receipt },
-  { name: 'Parking Lot', href: '/?view=parking', icon: Inbox },
-  { name: 'Archive', href: '/?view=archive', icon: Archive },
+  { name: 'Parking Lot', href: '/terminal?view=parking', icon: Inbox },
+  { name: 'Archive', href: '/terminal?view=archive', icon: Archive },
   { name: 'Signal Lab', href: '/lab', icon: FlaskConical },
   { name: 'Market State', href: '/market', icon: BarChart3 },
 ];

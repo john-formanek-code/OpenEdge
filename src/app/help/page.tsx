@@ -23,11 +23,11 @@ export default function HelpPage() {
   return (
     <div className="h-full flex flex-col">
       <div className="function-strip sticky top-0 z-20">
-        <Link href="/?view=dash" className="function-key">
+        <Link href="/terminal?view=dash" className="function-key">
           <span className="keycode">Esc</span>
           <span className="hidden sm:inline">Exit Help</span>
         </Link>
-        <Link href="/" className="function-key">
+        <Link href="/terminal" className="function-key">
           <span className="keycode">F1</span>
           <span className="hidden sm:inline">Dashboard</span>
         </Link>
