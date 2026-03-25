@@ -1,6 +1,9 @@
 import { Shield, Server } from "lucide-react";
+import { getDatabaseUrl, isFileDatabaseUrl } from "@/lib/env";
 
 export default function SettingsPage() {
+  const isLocalSqlite = isFileDatabaseUrl(getDatabaseUrl());
+
   return (
     <div className="h-full bg-black flex flex-col">
       <div className="bg-[#111] border-b border-[#333] px-3 py-1 text-[10px] font-bold text-zinc-600">
@@ -26,9 +29,15 @@ export default function SettingsPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <div className="text-xs font-bold text-white">DB_BACKUP</div>
-                  <div className="text-[9px] text-zinc-600">Download raw SQLite image</div>
+                  <div className="text-[9px] text-zinc-600">
+                    {isLocalSqlite ? "Download raw SQLite image" : "Unavailable for managed/libSQL deployments"}
+                  </div>
                 </div>
-                <a href="/api/backup" className="bg-[#111] border border-[#333] hover:border-[color:var(--terminal-accent)] px-3 py-1 text-[10px] font-bold transition-colors">DL_.DB</a>
+                {isLocalSqlite ? (
+                  <a href="/api/backup" className="bg-[#111] border border-[#333] hover:border-[color:var(--terminal-accent)] px-3 py-1 text-[10px] font-bold transition-colors">DL_.DB</a>
+                ) : (
+                  <button className="bg-[#111] border border-[#333] px-3 py-1 text-[10px] font-bold cursor-not-allowed opacity-50">N/A</button>
+                )}
               </div>
               <div className="flex justify-between items-center">
                 <div>

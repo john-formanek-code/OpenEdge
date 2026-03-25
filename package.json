@@ -7,8 +7,13 @@
     "build": "next build",
     "start": "next start -p 2500",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm lint && pnpm typecheck && pnpm build",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
+  },
+  "engines": {
+    "node": ">=20.11.0"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
