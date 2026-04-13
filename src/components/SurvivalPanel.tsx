@@ -11,12 +11,29 @@ export function SurvivalPanel({ currentDD = 0, historyR = [] }: { currentDD?: nu
   }, [currentDD]);
 
   const distribution = useMemo(() => {
-    if (historyR.length < 3) return null;
-    const sorted = [...historyR].sort((a, b) => a - b);
+    if (historyR.length < 5) return null;
+    
+    // Simple Monte Carlo: 1000 paths, 20 trades each
+    const paths = 1000;
+    const trades = 20;
+    const finalReturns: number[] = [];
+
+    for (let p = 0; p < paths; p++) {
+      let pathReturn = 0;
+      for (let t = 0; t < trades; t++) {
+        // Randomly sample from history
+        const sample = historyR[Math.floor(Math.random() * historyR.length)];
+        pathReturn += sample;
+      }
+      finalReturns.push(pathReturn);
+    }
+
+    const sorted = finalReturns.sort((a, b) => a - b);
     const pick = (pct: number) => {
       const idx = Math.min(sorted.length - 1, Math.floor((pct / 100) * sorted.length));
       return sorted[idx];
     };
+
     return {
       worst: sorted[0],
       p10: pick(10),

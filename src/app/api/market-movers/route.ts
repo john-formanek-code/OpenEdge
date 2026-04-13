@@ -1,54 +1,57 @@
 import { NextResponse } from 'next/server';
+import { getQuotes } from '@/lib/marketData';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Cache for 60 seconds
 
-export async function GET(req: Request) {
+// More comprehensive lists for a real terminal feel
+const EQUITY_LEADERS = [
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AVGO', 'BRK-B', 'LLY',
+  'JPM', 'UNH', 'XOM', 'V', 'PG', 'MA', 'COST', 'HD', 'JNJ', 'ORCL',
+  'ABBV', 'CVX', 'BAC', 'WMT', 'MRK', 'ADBE', 'CRM', 'NFLX', 'PEP', 'AMD',
+  'DIS', 'CSCO', 'TMO', 'ABT', 'INTC', 'CMCSA', 'QCOM', 'TXN', 'VZ', 'CAT',
+  'GE', 'AMAT', 'IBM', 'BA', 'PFE', 'PM', 'MS', 'ISRG', 'HON', 'GS'
+];
+
+const CRYPTO_LEADERS = [
+  'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD', 'AVAX-USD', 'DOGE-USD', 'LINK-USD', 'DOT-USD'
+];
+
+const SECTOR_ETFS = [
+  'XLK', 'XLF', 'XLV', 'XLY', 'XLC', 'XLI', 'XLP', 'XLE', 'XLB', 'XLRE', 'XLU'
+];
+
+const SECTOR_MAP: Record<string, string> = {
+  'XLK': 'Technology',
+  'XLF': 'Financials',
+  'XLV': 'Healthcare',
+  'XLY': 'Consumer Disc',
+  'XLC': 'Comm Services',
+  'XLI': 'Industrials',
+  'XLP': 'Consumer Staples',
+  'XLE': 'Energy',
+  'XLB': 'Materials',
+  'XLRE': 'Real Estate',
+  'XLU': 'Utilities'
+};
+
+export async function GET() {
   try {
-    // Determine the base URL for the internal API call
-    const url = new URL(req.url);
-    const baseUrl = `${url.protocol}//${url.host}`;
+    const allSymbols = [...EQUITY_LEADERS, ...CRYPTO_LEADERS, ...SECTOR_ETFS];
+    const quotes = await getQuotes(allSymbols);
 
-    // Symbols to track for movers
-    const moverSymbols = [
-      'NVDA', 'AMD', 'SMCI', 'MRVL', 'AVGO', 'TSLA', 'AAPL', 'NFLX', 'GOOGL', 'AMZN', 'MSFT', 'META',
-      'COIN', 'MSTR', 'PLTR', 'ARM', 'INTC', 'BTC-USD', 'ETH-USD', 'SOL-USD'
-    ];
+    // Process Equities and Crypto for Gainers/Losers
+    const movers = quotes.filter(q => EQUITY_LEADERS.includes(q.symbol) || CRYPTO_LEADERS.includes(q.symbol));
+    const sorted = [...movers].sort((a, b) => b.changePct - a.changePct);
     
-    // Symbols for sectors
-    const sectorSymbols = [
-      'XLK', // Tech
-      'XLE', // Energy
-      'XLF', // Financials
-      'XLV', // Healthcare
-      'XLY', // Consumer Disc
-      'XLU'  // Utilities
-    ];
-
-    const allSymbols = [...moverSymbols, ...sectorSymbols].join(',');
-    
-    const res = await fetch(`${baseUrl}/api/quotes?symbols=${allSymbols}`, {
-      next: { revalidate: 60 }
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Failed to fetch quotes for movers' }, { status: 500 });
-    }
-
-    const data = await res.json();
-    const quotes: any[] = data.quotes || [];
-
-    // Process Movers
-    const movers = quotes.filter(q => moverSymbols.includes(q.symbol));
-    const sortedMovers = [...movers].sort((a, b) => b.changePct - a.changePct);
-    
-    const gainers = sortedMovers.slice(0, 5).map(q => ({
+    const gainers = sorted.slice(0, 10).map(q => ({
       symbol: q.symbol,
       last: q.last,
       chg: q.change,
       pct: q.changePct
     }));
 
-    const losers = sortedMovers.slice(-5).reverse().map(q => ({
+    const losers = sorted.slice(-10).reverse().map(q => ({
       symbol: q.symbol,
       last: q.last,
       chg: q.change,
@@ -56,22 +59,13 @@ export async function GET(req: Request) {
     }));
 
     // Process Sectors
-    const sectorMap: Record<string, string> = {
-      'XLK': 'Technology',
-      'XLE': 'Energy',
-      'XLF': 'Financials',
-      'XLV': 'Healthcare',
-      'XLY': 'Consumer Disc',
-      'XLU': 'Utilities'
-    };
-
     const sectors = quotes
-      .filter(q => sectorSymbols.includes(q.symbol))
+      .filter(q => SECTOR_ETFS.includes(q.symbol))
       .map(q => ({
-        name: sectorMap[q.symbol] || q.symbol,
+        name: SECTOR_MAP[q.symbol] || q.symbol,
         pct: q.changePct
       }))
-      .sort((a, b) => b.pct - a.pct); // Sort sectors from best to worst
+      .sort((a, b) => b.pct - a.pct);
 
     return NextResponse.json({ gainers, losers, sectors });
 

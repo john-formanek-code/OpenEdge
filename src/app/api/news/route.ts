@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchWithTimeout } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Cache for 60 seconds
 
 export async function GET() {
@@ -45,7 +46,7 @@ export async function GET() {
         // Breaking News Heuristic
         const isBreaking = title.includes('URGENT') || title.includes('BREAKING') || lowerDesc.match(/fed|inflation|cpi|war|attack|sec sues|hacks/);
 
-        // Extract some fake tags based on keywords
+        // Extract metadata tags based on keywords
         const tags = [];
         if (lowerDesc.includes('crypto') || lowerDesc.includes('bitcoin') || lowerDesc.includes('etf')) tags.push('CRYPTO');
         if (lowerDesc.includes('fed') || lowerDesc.includes('rate') || lowerDesc.includes('powell')) tags.push('MACRO', 'FED');

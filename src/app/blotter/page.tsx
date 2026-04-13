@@ -24,8 +24,11 @@ export default async function BlotterPage({
         
         {/* Main Log Area */}
         <div className="h-full bg-black flex flex-col min-h-0">
-          <div className="terminal-header">
+          <div className="terminal-header flex justify-between items-center">
             <span>TRANSACTION_LOG • N={data.length}</span>
+            <a href="/api/blotter/export" className="bg-[#111] hover:bg-[#1a1a1a] border border-[#333] hover:border-[var(--terminal-accent)] px-2 py-0.5 text-[9px] font-bold text-zinc-300 transition-colors cursor-pointer uppercase">
+              EXPORT_CSV
+            </a>
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -45,7 +48,7 @@ export default async function BlotterPage({
                 {data.map((exec) => (
                   <tr key={exec.id} className="border-b border-[#111] hover:bg-[#0a0a0a] transition-colors group">
                     <td className="p-2 text-zinc-500 italic">{exec.executedAt?.toLocaleString()}</td>
-                    <td className="p-2 font-bold text-white uppercase">{exec.hypothesisId.slice(0,4)}...</td>
+                    <td className="p-2 font-bold text-white uppercase">{exec.symbol}</td>
                     <td className={`p-2 font-black ${exec.side === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
                       {exec.side.toUpperCase()}
                     </td>

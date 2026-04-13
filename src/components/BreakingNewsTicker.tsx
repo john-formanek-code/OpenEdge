@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Zap } from 'lucide-react';
+import { sounds } from '@/lib/sounds';
 
 type NewsItem = {
   id: string;
@@ -53,7 +54,10 @@ export function BreakingNewsTicker() {
             
             // Trigger push if it's breaking OR it's the first time we see this piece
             if (urgent.isBreaking) {
+              sounds.playAlert();
               triggerAlerts(urgent);
+            } else {
+              sounds.playDing();
             }
 
             if (!urgent.isBreaking) {

@@ -1,55 +1,48 @@
 import { NextResponse } from 'next/server';
 
-export const revalidate = 0; // Dynamic route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Dynamic
 
-const SYMBOLS = ['NVDA', 'AAPL', 'TSLA', 'AMD', 'SPY', 'QQQ', 'META', 'AMZN', 'MSFT', 'IWM', 'PLTR', 'SMCI'];
-const EXPIRATIONS = ['0DTE', '1W', '2W', '1M', '3M', '6M', 'LEAP'];
-const TYPES = ['SWEEP', 'BLOCK', 'SPLIT'];
-const SENTIMENTS = ['BULLISH', 'BEARISH', 'NEUTRAL'];
+const PAIRS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT', 'SUIUSDT'];
+const MIN_USD_VALUE = 50000; // Large trades only
 
-// Simulates a live tape of institutional options flow and dark pool prints
-export async function GET() {
-  const now = new Date();
-  
-  // Generate 15-20 random recent flow prints
-  const flowCount = Math.floor(Math.random() * 5) + 15;
-  const flows = [];
-
-  for (let i = 0; i < flowCount; i++) {
-    // Randomize timestamp within the last 5 minutes
-    const timeOffset = Math.floor(Math.random() * 300000); 
-    const printTime = new Date(now.getTime() - timeOffset);
+async function fetchLargeTrades(symbol: string) {
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/aggTrades?symbol=${symbol}&limit=20`);
+    if (!res.ok) return [];
+    const trades = await res.json();
     
-    const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-    const type = TYPES[Math.floor(Math.random() * TYPES.length)];
-    const expiration = EXPIRATIONS[Math.floor(Math.random() * EXPIRATIONS.length)];
-    const isCall = Math.random() > 0.5;
-    const strikeOffset = Math.floor(Math.random() * 20) - 5; // -5 to +15%
-    
-    let sentiment = 'NEUTRAL';
-    if (isCall && type === 'SWEEP') sentiment = 'BULLISH';
-    if (!isCall && type === 'SWEEP') sentiment = 'BEARISH';
-    if (isCall && strikeOffset < 0) sentiment = 'BULLISH'; // Deep ITM call
-    if (!isCall && strikeOffset < 0) sentiment = 'BEARISH'; // Deep ITM put
-    
-    const premium = Math.floor(Math.random() * 5000) * 1000 + 100000; // 100k to 5.1M
-    const premiumFormatted = premium > 1000000 ? `${(premium / 1000000).toFixed(1)}M` : `${(premium / 1000).toFixed(0)}K`;
-
-    flows.push({
-      id: `print-${now.getTime()}-${i}`,
-      time: printTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      timestamp: printTime.getTime(),
-      symbol,
-      type,
-      contract: `${isCall ? 'C' : 'P'} | ${expiration}`,
-      premium: `$${premiumFormatted}`,
-      sentiment,
-      details: `${type} ${isCall ? 'CALL' : 'PUT'} at ask. High urgency.`
-    });
+    return trades.map((t: any) => {
+      const price = parseFloat(t.p);
+      const qty = parseFloat(t.q);
+      const usdValue = price * qty;
+      const isBuyerMaker = t.m; // True if seller is maker, so it's a sell-side market trade? Wait, m means "was the buyer the market maker?". If true, it's a sell.
+      
+      return {
+        id: `binance-${t.a}`,
+        time: new Date(t.T).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        timestamp: t.T,
+        symbol: symbol.replace('USDT', ''),
+        type: usdValue > 250000 ? 'WHALE' : 'BLOCK',
+        contract: `${isBuyerMaker ? 'SELL' : 'BUY'} @ ${price.toLocaleString()}`,
+        premium: usdValue > 1000000 ? `$${(usdValue / 1000000).toFixed(1)}M` : `$${(usdValue / 1000).toFixed(0)}K`,
+        sentiment: isBuyerMaker ? 'BEARISH' : 'BULLISH',
+        usdValue
+      };
+    }).filter((t: any) => t.usdValue >= MIN_USD_VALUE);
+  } catch (e) {
+    return [];
   }
+}
 
-  // Sort by most recent first
-  flows.sort((a, b) => b.timestamp - a.timestamp);
-
-  return NextResponse.json({ flows });
+export async function GET() {
+  try {
+    // Fetch from a few pairs to get a diverse tape
+    const results = await Promise.all(PAIRS.slice(0, 5).map(fetchLargeTrades));
+    const flows = results.flat().sort((a, b) => b.timestamp - a.timestamp).slice(0, 30);
+    
+    return NextResponse.json({ flows });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to process trades' }, { status: 500 });
+  }
 }

@@ -1,42 +1,42 @@
 import { NextResponse } from 'next/server';
+import { getQuotes } from '@/lib/marketData';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
+export const revalidate = 300; // Cache for 5 minutes
 
-// Base realistic yields as of early 2024
-const BASE_YIELDS = {
-  US: [5.37, 5.41, 5.35, 5.02, 4.62, 4.25, 4.28, 4.42],
-  UK: [5.20, 5.25, 5.15, 4.80, 4.30, 4.05, 4.10, 4.55],
-  DE: [3.80, 3.85, 3.80, 3.50, 2.90, 2.45, 2.40, 2.55],
-  JP: [-0.05, -0.01, 0.05, 0.12, 0.19, 0.38, 0.75, 1.80],
+const MAPPING: Record<string, string[]> = {
+  US: ['3MSY.B', '1YSY.B', '2USY.B', '5USY.B', '10USY.B', '30USY.B'],
+  UK: ['10GBY.B'],
+  DE: ['10DEY.B'],
+  JP: ['10JPY.B']
 };
 
-const TERMS = ['1M', '3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y'];
+const TERMS = ['3M', '1Y', '2Y', '5Y', '10Y', '30Y'];
 
 export async function GET() {
-  // Add a small random jitter to simulate live market data
-  // Using a deterministic-ish approach based on current minute so it's consistent within the minute
-  const now = new Date();
-  const seed = now.getMinutes() + now.getHours() * 60;
-  
-  // Pseudo-random generator based on seed
-  const pseudoRandom = (min: number, max: number, index: number) => {
-    const x = Math.sin(seed + index) * 10000;
-    const rand = x - Math.floor(x);
-    return min + rand * (max - min);
-  };
-
-  const YIELD_CURVE_DATA = TERMS.map((term, i) => {
-    // Add ±0.05% jitter
-    const jitter = () => pseudoRandom(-0.05, 0.05, i);
+  try {
+    const allSymbols = Object.values(MAPPING).flat();
+    const quotes = await getQuotes(allSymbols);
     
-    return {
-      term,
-      us: BASE_YIELDS.US[i] + pseudoRandom(-0.03, 0.03, i * 1),
-      uk: BASE_YIELDS.UK[i] + pseudoRandom(-0.04, 0.04, i * 2),
-      de: BASE_YIELDS.DE[i] + pseudoRandom(-0.02, 0.02, i * 3),
-      jp: BASE_YIELDS.JP[i] + pseudoRandom(-0.01, 0.01, i * 4),
-    };
-  });
+    const findLast = (sym: string) => quotes.find(q => q.symbol === sym)?.last ?? 0;
 
-  return NextResponse.json({ yields: YIELD_CURVE_DATA });
+    const YIELD_CURVE_DATA = TERMS.map((term, i) => {
+      const usSym = MAPPING.US[i];
+      const usYield = usSym ? findLast(usSym) : 0;
+      
+      // For other countries we only have 10Y easily on Stooq in this batch
+      // So we'll fill with 0 or estimate if not 10Y, but better just show what we have
+      return {
+        term,
+        us: usYield,
+        uk: term === '10Y' ? findLast('10GBY.B') : 0,
+        de: term === '10Y' ? findLast('10DEY.B') : 0,
+        jp: term === '10Y' ? findLast('10JPY.B') : 0,
+      };
+    });
+
+    return NextResponse.json({ yields: YIELD_CURVE_DATA });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to process yields' }, { status: 500 });
+  }
 }

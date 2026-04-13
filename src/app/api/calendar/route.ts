@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchWithTimeout } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Cache for 1 hour
 
 export async function GET() {
@@ -40,11 +41,12 @@ export async function GET() {
       if (country === 'NZD') country = 'NZ';
 
       return {
+        date: e.date,
         time: timeStr,
         country: country,
         indicator: e.title,
         impact: impact,
-        actual: '', // Future events don't have actuals usually from this basic endpoint unless we hit it right after, but previous/forecast is good
+        actual: e.actual || '',
         forecast: e.forecast || '',
         previous: e.previous || '',
       };

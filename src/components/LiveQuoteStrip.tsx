@@ -33,7 +33,7 @@ export async function LiveQuoteStrip({ symbols = DEFAULT_SYMBOLS, view }: Props)
           const params = new URLSearchParams();
           if (view) params.set("view", view);
           params.set("load", q.symbol);
-          const href = `/?${params.toString()}`;
+          const href = `/terminal?${params.toString()}`;
           return (
             <Link key={`${q.symbol}-${idx}`} className="live-quote hover:border-[var(--bb-amber)]" href={href} prefetch={false}>
               <span className="ticker">{q.symbol}</span>

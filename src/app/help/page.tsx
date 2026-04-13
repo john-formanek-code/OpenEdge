@@ -92,8 +92,7 @@ export default function HelpPage() {
           </div>
           <div className="panel-body space-y-2 text-[#c2c2c2] text-[11px] leading-5">
             <p>Use mnemonics in the command bar, press GO (Enter) to navigate or load tickers. Panels are linked; switching functions preserves security context.</p>
-            <p>Alt+M reveals the function menu overlay. Ctrl+Shift+]/[ cycles active panel focus. The live strip shows EQ/CR badges; click tickers to load (coming soon).</p>
-            <p>For mobile / narrow viewports the function key labels collapse; the command bar remains primary navigation.</p>
+            <p>Alt+M reveals the function menu overlay. Ctrl+Shift+]/[ cycles active panel focus. The live strip shows EQ/CR badges; click tickers to load.</p>            <p>For mobile / narrow viewports the function key labels collapse; the command bar remains primary navigation.</p>
           </div>
         </div>
       </div>

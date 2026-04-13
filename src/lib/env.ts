@@ -18,17 +18,21 @@ export function getDatabaseAuthToken(): string | undefined {
 }
 
 export function getAuthSecret(): string {
-  if (!isProduction) {
-    return process.env.AUTH_SECRET || 'default-dev-secret-do-not-use-in-prod';
+  const secret = process.env.AUTH_SECRET;
+  if (!secret && isProduction) {
+    console.warn('AUTH_SECRET is not set. Authentication features will be disabled.');
+    return 'unset-production-secret-auth-disabled';
   }
-  return requireEnv('AUTH_SECRET');
+  return secret || 'default-dev-secret-do-not-use-in-prod';
 }
 
 export function getAuthPassword(): string {
-  if (!isProduction) {
-    return process.env.AUTH_PASSWORD || 'admin';
+  const password = process.env.AUTH_PASSWORD;
+  if (!password && isProduction) {
+    console.warn('AUTH_PASSWORD is not set. Login will be impossible.');
+    return 'unset-production-password-auth-disabled';
   }
-  return requireEnv('AUTH_PASSWORD');
+  return password || 'admin';
 }
 
 export function isFileDatabaseUrl(url: string): boolean {

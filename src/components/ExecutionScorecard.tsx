@@ -15,6 +15,7 @@ export function ExecutionScorecard({ executions, plan }: { executions: Execution
   const slippageBps = plan.avgEntryPrice ? (slippage / plan.avgEntryPrice) * 10000 : 0;
 
   const score = Math.max(0, 100 - (Math.abs(slippageBps) / 2));
+  const urgencyCost = Math.abs(avgFill - plan.avgEntryPrice) * totalSize;
 
   return (
     <div className="bb-card mt-8">
@@ -42,30 +43,41 @@ export function ExecutionScorecard({ executions, plan }: { executions: Execution
             {slippageBps > 0 ? '+' : ''}{slippageBps.toFixed(1)} <span className="text-xs font-normal text-zinc-500 font-sans">bps</span>
           </div>
           <p className="text-[10px] text-zinc-500 italic">
-            {slippageBps > 20 ? 'High slippage detected. Use more limit orders.' : 'Excellent fill quality.'}
+            {Math.abs(slippageBps) > 20 ? 'High slippage detected. Consider limit orders.' : 'Excellent fill quality.'}
           </p>
         </div>
 
-        {/* Metric 2: Timing */}
+        {/* Metric 2: Timing - Heuristic based on slippage */}
         <div className="space-y-2 text-center">
           <div className="text-[10px] text-zinc-500 uppercase font-bold flex items-center justify-center tracking-[0.08em]">
             <Crosshair className="w-3 h-3 mr-1 text-[var(--bb-amber)]" />
             Timing Optimality
           </div>
-          <div className="text-2xl font-mono font-black text-[var(--bb-green)]">92%</div>
-          <p className="text-[10px] text-zinc-500 italic">Entry was 0.4% from local low.</p>
+          <div className={`text-2xl font-mono font-black ${score > 80 ? 'text-[var(--bb-green)]' : 'text-zinc-400'}`}>
+            {score.toFixed(0)}%
+          </div>
+          <p className="text-[10px] text-zinc-500 italic">
+            {slippageBps < 0 ? 'Entry improved on plan.' : 'Entry was delayed from plan.'}
+          </p>
         </div>
 
-        {/* Metric 3: Simulator Info */}
+        {/* Metric 3: Urgency Cost */}
         <div className="bg-[#0b0b0b] p-3 border border-[color:var(--bb-border)]">
           <div className="flex items-center justify-between mb-2">
-             <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-[0.08em]">Limit Fill Simulator</span>
+             <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-[0.08em]">Impact Analysis</span>
              <Zap className="w-3 h-3 text-[var(--bb-amber)]" />
           </div>
-          <p className="text-[10px] text-zinc-300 leading-tight">
-            &quot;Would limit have filled?&quot;: <span className="text-green-400 font-bold">YES</span>. <br/>
-            By using Market, you paid <span className="text-red-400">$42.50</span> for urgency.
+          <p className="text-[10px] text-zinc-300 leading-tight uppercase font-black">
+            Urgency Premium: <span className={urgencyCost > 0 ? 'text-red-400' : 'text-green-400'}>
+              ${urgencyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
           </p>
+          <div className="mt-2 h-1 bg-zinc-900 overflow-hidden">
+             <div 
+               className={`h-full ${urgencyCost > 50 ? 'bg-red-500' : 'bg-amber-500'}`} 
+               style={{ width: `${Math.min(100, (urgencyCost / 100) * 100)}%` }} 
+             />
+          </div>
         </div>
       </div>
     </div>

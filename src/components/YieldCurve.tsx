@@ -100,9 +100,13 @@ export function YieldCurve() {
               );
             })}
           </div>
-          <div className="text-center mt-4 text-[9px] text-zinc-500">
-            Current shape indicates an <span className="text-amber-500 font-bold">inverted</span> yield curve.
-          </div>
+          {yieldData.length >= 2 && (
+            <div className="text-center mt-4 text-[9px] text-zinc-500 uppercase">
+              Current shape: <span className={`${yieldData[yieldData.length - 1].us < yieldData[0].us ? 'text-red-500' : 'text-green-500'} font-bold`}>
+                {yieldData[yieldData.length - 1].us < yieldData[0].us ? 'INVERTED' : 'NORMAL'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

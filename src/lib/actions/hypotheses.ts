@@ -65,21 +65,29 @@ export async function getPortfolioRiskSummary() {
   const activeHypotheses = await db.select().from(hypotheses).where(eq(hypotheses.status, 'active'));
   const activeIds = activeHypotheses.map(h => h.id);
   if (activeIds.length === 0) return { clusters: [], stops: [] };
+  
   const plans = await db.select().from(tradePlans);
   const activePlans = plans.filter(p => activeIds.includes(p.hypothesisId));
+  
   const clusters = activeHypotheses.reduce((acc: any, h) => {
     const plan = activePlans.find(p => p.hypothesisId === h.id);
-    const risk = plan?.totalRiskAmount || 0;
+    const exposure = (plan?.totalPositionSize || 0) * (plan?.avgEntryPrice || 0);
     const existing = acc.find((c: any) => c.name === h.assetClass);
-    if (existing) { existing.exposure += risk; existing.rCount += 1; }
-    else { acc.push({ name: h.assetClass, exposure: risk, rCount: 1 }); }
+    if (existing) { 
+      existing.exposure += exposure; 
+      existing.rCount += 1; 
+    } else { 
+      acc.push({ name: h.assetClass, exposure, rCount: 1 }); 
+    }
     return acc;
   }, []);
+
   const stops = activePlans.filter(p => p.stopLoss && (p.stopLoss as any).price).map(p => ({
     price: (p.stopLoss as any).price,
     risk: p.totalRiskAmount,
     hypothesisId: p.hypothesisId
   })).sort((a, b) => b.price - a.price);
+  
   return { clusters, stops };
 }
 
@@ -199,6 +207,12 @@ export async function getExpectancyStats() {
     const tradeExecs = allExecutions.filter(e => e.hypothesisId === h.id);
     const totalBuy = tradeExecs.filter(e => e.side === 'buy').reduce((s, e) => s + (e.price * e.size), 0);
     const totalSell = tradeExecs.filter(e => e.side === 'sell').reduce((s, e) => s + (e.price * e.size), 0);
+    const totalBuySize = tradeExecs.filter(e => e.side === 'buy').reduce((s, e) => s + e.size, 0);
+    const totalSellSize = tradeExecs.filter(e => e.side === 'sell').reduce((s, e) => s + e.size, 0);
+
+    // Ensure position is closed (within 1% tolerance)
+    if (totalBuySize === 0 || Math.abs(totalBuySize - totalSellSize) > (totalBuySize * 0.01)) return acc;
+
     const pnl = totalSell - totalBuy;
     const r = plan?.totalRiskAmount ? pnl / plan.totalRiskAmount : 0;
     if (!acc[setup]) acc[setup] = { name: setup, count: 0, sumR: 0, wins: 0 };
@@ -209,79 +223,66 @@ export async function getExpectancyStats() {
 }
 
 export async function getBlotter() {
-  return await db.select().from(executions).orderBy(desc(executions.executedAt));
+  return await db.select({
+    id: executions.id,
+    hypothesisId: executions.hypothesisId,
+    side: executions.side,
+    price: executions.price,
+    size: executions.size,
+    fee: executions.fee,
+    executedAt: executions.executedAt,
+    symbol: hypotheses.symbol
+  })
+  .from(executions)
+  .innerJoin(hypotheses, eq(executions.hypothesisId, hypotheses.id))
+  .orderBy(desc(executions.executedAt));
 }
 
 export async function getBehavioralStats() {
-
   const violations = await db.select().from(ruleViolations);
-
   const audits = await db.select().from(auditTrail);
-
   const allHypotheses = await db.select().from(hypotheses);
-
   const allExecutions = await db.select().from(executions);
 
-
-
   // 1. Latency: Trigger -> First Fill
-
   const latencies = allHypotheses
-
     .filter(h => h.triggerTimestamp && allExecutions.some(e => e.hypothesisId === h.id))
-
     .map(h => {
-
       const firstFill = allExecutions
-
         .filter(e => e.hypothesisId === h.id)
-
         .sort((a, b) => (a.executedAt?.getTime() || 0) - (b.executedAt?.getTime() || 0))[0];
-
       return (firstFill.executedAt?.getTime() || 0) - (h.triggerTimestamp?.getTime() || 0);
-
     });
-
   
-
   const avgLatency = latencies.length > 0 ? (latencies.reduce((a, b) => a + b, 0) / latencies.length / 60000).toFixed(1) : '0';
 
-
-
-  // 2. Drift: Count audits after 'entered' state
-
+  // 2. Drift: Count audits after 'entered' state (manual adjustment count)
   const drifts = audits.filter(a => a.oldValue === 'entered' || a.oldValue === 'managed').length;
-
   const avgDrift = allHypotheses.length > 0 ? (drifts / allHypotheses.length).toFixed(1) : '0';
 
-
-
   // 3. Rule Breaks
-
   const breakRate = allHypotheses.length > 0 ? ((violations.length / allHypotheses.length) * 100).toFixed(0) : '0';
 
-
-
   return {
-
     latency: `${avgLatency}m`,
-
     drift: `${avgDrift}/trade`,
-
     breakRate: `${breakRate}%`,
-
     violations: violations.slice(0, 5)
-
   };
-
 }
 
 
 
 export async function logViolation(data: any) {
-
   await db.insert(ruleViolations).values(data);
-
   revalidatePath('/');
+}
 
+export async function addEquitySnapshot(balance: number, drawdown: number) {
+  await db.insert(equitySnapshots).values({
+    balance,
+    drawdown,
+    timestamp: new Date()
+  });
+  revalidatePath('/terminal');
 }

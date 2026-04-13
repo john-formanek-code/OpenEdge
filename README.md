@@ -1,53 +1,94 @@
 # OpenEdge
 
-Trading workspace app built with Next.js App Router, React 19, and Drizzle ORM.
+**OpenEdge** is a specialized trading terminal and workflow engine designed for high-conviction traders and small teams. It bridges the gap between raw market data and disciplined trade execution, focusing on hypothesis tracking, rule enforcement, and execution analysis.
 
-## Stack
-- Next.js 16
-- React 19
-- TypeScript
-- Drizzle ORM + SQLite/libSQL
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://open-edge-phi.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## Local development
+---
+
+## ⚡ Core Features
+
+- **Live Market Tape**: High-density real-time quotes and breaking news ticker (Yahoo Finance, CNBC, CoinGecko).
+- **Hypothesis Engine**: Systematic trade planning and review (Drizzle ORM + SQLite).
+- **Rule Enforcement**: Integrated behavioral guardrails to track FOMO, revenge trading, and drift.
+- **Dynamic Workspaces**: Flexible, persistent dashboard layouts using `PanelWorkspace`.
+- **TradingView Integration**: Fully integrated multi-chart grid with ticker synchronization.
+- **Execution Scorecards**: Detailed post-trade analysis and performance metrics.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **Runtime**: [React 19](https://react.dev/)
+- **Database**: [Drizzle ORM](https://orm.drizzle.team/) with [libSQL](https://github.com/tursodatabase/libsql) (SQLite)
+- **Styling**: Tailwind CSS + Framer Motion
+- **State**: React Context + Custom Hooks
+- **Icons**: Lucide React
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- [Node.js 20+](https://nodejs.org/)
+- [pnpm 9+](https://pnpm.io/)
+
+### 2. Local Setup
 ```bash
+# Clone the repository
+git clone https://github.com/john-formanek-code/OpenEdge.git
+cd OpenEdge
+
+# Install dependencies
 pnpm install
+
+# Environment setup
 cp .env.example .env.local
+
+# Database migration
+pnpm drizzle-kit push
+
+# Start development server
 pnpm dev
 ```
+Open [http://localhost:2500](http://localhost:2500) to access the terminal.
 
-App runs on `http://localhost:2500`.
+---
 
-## Environment variables
-See `.env.example`.
+## 🌍 Deployment
 
-Required for production:
-- `DATABASE_URL`
+### Vercel
+1. Push your fork to GitHub.
+2. Import the project in [Vercel](https://vercel.com).
+3. Set your environment variables (see `.env.example`).
+4. (Optional) Connect a [Turso](https://turso.tech/) database for a managed libSQL experience.
 
-Optional:
-- `DATABASE_AUTH_TOKEN`
-- `AUTH_SECRET` (only if you enable password auth)
-- `AUTH_PASSWORD` (only if you enable password auth)
+---
 
-## Deploy to Vercel
-1. Push this repo to GitHub.
-2. Import project in Vercel.
-3. Set environment variables from `.env.example`.
-4. Deploy.
+## 🧪 Quality & Testing
 
-Build command:
-```bash
-pnpm build
-```
-
-## Quality checks
+Ensure code quality with the built-in check suite:
 ```bash
 pnpm check
 ```
+This runs TypeScript validation, linting, and basic formatting checks.
 
-## Open source
-- License: MIT (`LICENSE`)
-- Security policy: `SECURITY.md`
-- Contributing guide: `CONTRIBUTING.md`
-- Code of conduct: `CODE_OF_CONDUCT.md`
+---
 
-Additional docs: [docs/README.md](docs/README.md)
+## 🤝 Contributing
+
+Contributions are welcome! Whether it's a new feature, bug fix, or documentation improvement:
+1. Review the [Contributing Guide](CONTRIBUTING.md).
+2. Adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).
+3. Open a Pull Request with a clear description of changes.
+
+---
+
+## ⚖️ License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+*OpenEdge is an open-source tool for informational and workflow purposes only. Always manage your risk responsibly.*

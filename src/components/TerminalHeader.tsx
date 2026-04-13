@@ -3,15 +3,32 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTerminal } from './TerminalContext';
+import { sounds } from '@/lib/sounds';
+import { useSession } from '@/hooks/useSession';
+import Link from 'next/link';
 
 export function TerminalHeader() {
   const router = useRouter();
+  const { isAuthenticated, status } = useSession();
   const { setFocusedTicker } = useTerminal();
   const [command, setCommand] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);
   const [nyTime, setNyTime] = useState('—:—:—');
   const [ldnTime, setLdnTime] = useState('—:—:—');
   const [latency, setLatency] = useState<number | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('openedge_cmd_history');
+    if (stored) setHistory(JSON.parse(stored));
+  }, []);
+
+  const saveHistory = (cmd: string) => {
+    const next = [cmd, ...history.filter(h => h !== cmd)].slice(0, 50);
+    setHistory(next);
+    localStorage.setItem('openedge_cmd_history', JSON.stringify(next));
+  };
 
   useEffect(() => {
     const fmt = (tz: string) =>
@@ -80,17 +97,52 @@ export function TerminalHeader() {
       case 'LAB': router.push('/lab'); break;
       case 'JRNL': router.push('/blotter?view=journal'); break;
       case 'WATCH': router.push('/watch'); break;
-      case 'HEAT': router.push('/terminal?search=HEAT'); break; // Logic to trigger panel open via URL or state
+      case 'HEAT': router.push('/terminal?search=HEAT'); break;
+      case 'TOP': router.push('/terminal?search=TOP'); break;
+      case 'CURV': router.push('/terminal?search=CURV'); break;
+      case 'OFLOW': router.push('/terminal?search=OFLOW'); break;
+      case 'ALRT': router.push('/terminal?search=ALRT'); break;
       case 'ECO': router.push('/terminal?search=ECO'); break;
+      case 'NEWS': router.push('/terminal?search=NEWS'); break;
+      case 'L2': router.push('/terminal?search=L2'); break;
       case 'SET': router.push('/settings'); break;
       case 'HELP': router.push('/help'); break;
+      case 'LOGOUT': router.push('/login'); break; // Fallback to login page for logout action
       default: 
-        if (prefix.length > 0) {
+        if (arg === 'L2') {
+          setFocusedTicker(prefix);
+          router.push(`/terminal?search=L2`);
+        } else if (prefix.length > 0) {
           setFocusedTicker(prefix);
           router.push(`/terminal?search=${prefix}`);
         }
     }
+    
+    sounds.playDing();
+    if (command.trim()) saveHistory(command.trim());
+    setHistoryIdx(-1);
     setCommand('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const nextIdx = historyIdx + 1;
+      if (nextIdx < history.length) {
+        setHistoryIdx(nextIdx);
+        setCommand(history[nextIdx]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIdx = historyIdx - 1;
+      if (nextIdx >= 0) {
+        setHistoryIdx(nextIdx);
+        setCommand(history[nextIdx]);
+      } else {
+        setHistoryIdx(-1);
+        setCommand('');
+      }
+    }
   };
 
   // Keyboard shortcuts for HELP and ESC
@@ -112,14 +164,21 @@ export function TerminalHeader() {
     <header className="terminal-chrome h-12 border-b border-[color:var(--bb-border)] flex items-center px-3 justify-between shrink-0 select-none relative overflow-hidden">
       <div className="flex items-center flex-1 space-x-3 relative z-10">
         <div className="flex items-center px-3 py-1.5 border border-[color:var(--bb-border)] bg-[#0c0c0c] shadow-[inset_0_0_0_1px_#111] rounded-sm">
-          <span className="text-[9px] text-[#777] font-black tracking-[0.08em]">TRADE//OS</span>
+          <Link href="/" className="text-[9px] text-[#777] font-black tracking-[0.08em] hover:text-white transition-colors">TRADE//OS</Link>
           <span className="ml-2 text-[var(--bb-amber)] font-black text-xs">GO</span>
         </div>
+        
         <div className="hidden lg:flex items-center space-x-2 text-[10px] uppercase tracking-[0.08em] text-[#9c9c9c]">
-          <span className="status-led on" aria-label="data link" />
-          <span className="font-bold text-white">LIVE</span>
+          <span className={`status-led ${isAuthenticated ? 'on' : 'off'}`} aria-label="data link" />
+          <span className="font-bold text-white">{isAuthenticated ? 'AUTHORIZED' : 'GUEST'}</span>
           <span className="text-[#666]">|</span>
-          <span>USER PRIME</span>
+          {status === 'loading' ? (
+            <span className="animate-pulse">BOOT...</span>
+          ) : isAuthenticated ? (
+            <span className="text-zinc-100 font-bold">USER PRIME</span>
+          ) : (
+            <Link href="/login" className="text-amber-500/80 hover:text-amber-500 transition-colors">ENTER CREDENTIALS</Link>
+          )}
           <span>·</span>
           <span>ENV PROD</span>
         </div>
@@ -130,6 +189,7 @@ export function TerminalHeader() {
             type="text"
             value={command}
             onChange={(e) => setCommand(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full bg-transparent text-[var(--bb-amber)] text-xs font-black uppercase focus:outline-none placeholder-[#333]"
             placeholder="Enter mnemonic (e.g., AAPL GO, RISK GO, P2 NEWS GO)"
             autoFocus

@@ -13,8 +13,10 @@ import { NewsTerminal } from './NewsTerminal';
 import { YieldCurve } from './YieldCurve';
 import { PositionBuilder } from './PositionBuilder';
 import { OptionsFlow } from './OptionsFlow';
+import { LevelTwoBook } from './LevelTwoBook';
 import { NotificationCenter } from './NotificationCenter';
 import { NewHypothesisDialog } from './NewHypothesisDialog';
+import { UpdateMarketStateDialog } from './UpdateMarketStateDialog';
 import { DraggablePanel } from './workspace/DraggablePanel';
 import { useWorkspaceLayout } from '@/hooks/useWorkspaceLayout';
 import { PanelState as WorkspacePanelState } from '@/types/workspace';
@@ -189,6 +191,7 @@ function RiskPanel({ riskSummary, equityReturns, equity }: { riskSummary: RiskSu
 }
 
 function NewsPanel({ events, marketState }: { events: MarketEvent[]; marketState: MarketStateSummary }) {
+  const { isAuthenticated } = useSession();
   return (
     <div className="flex flex-col h-full overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 p-2">
@@ -222,12 +225,19 @@ function NewsPanel({ events, marketState }: { events: MarketEvent[]; marketState
                 </div>
                 <div className="h-px bg-[#111]" />
                 <div className="text-[#888]">NARRATIVE</div>
-                <div className="text-white leading-tight">{marketState.biasSummary}</div>
+                <div className="text-white leading-tight mb-2">{marketState.biasSummary}</div>
+                {isAuthenticated && (
+                  <div className="pt-2 border-t border-[#111] flex justify-center">
+                    <UpdateMarketStateDialog />
+                  </div>
+                )}
             </div>
         </div>
     </div>
   );
 }
+
+import { useSession } from '@/hooks/useSession';
 
 export function PanelWorkspace({
   watchlist,
@@ -247,6 +257,7 @@ export function PanelWorkspace({
   initialSecurity?: string | null;
 }) {
   const { focusedTicker } = useTerminal();
+  const { isAuthenticated } = useSession();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const {
     state,
@@ -335,6 +346,8 @@ export function PanelWorkspace({
         return <div className="h-full overflow-hidden"><PositionBuilder hypothesisId="new" initialPlan={{ symbol: focusedTicker || 'BTC' }} /></div>;
       case 'OFLOW':
         return <div className="h-full overflow-hidden"><OptionsFlow /></div>;
+      case 'L2':
+        return <div className="h-full overflow-hidden"><LevelTwoBook symbol={panelSecurities[panel.id]} /></div>;
       case 'ALRT':
         return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
       default:
@@ -348,6 +361,7 @@ export function PanelWorkspace({
         if (panel.id === 'HEAT') return <div className="h-full overflow-hidden"><MarketHeatmap /></div>;
         if (panel.id === 'POSB') return <div className="h-full overflow-hidden"><PositionBuilder hypothesisId="new" initialPlan={{ symbol: focusedTicker || 'BTC' }} /></div>;
         if (panel.id === 'OFLOW') return <div className="h-full overflow-hidden"><OptionsFlow /></div>;
+        if (panel.id === 'L2') return <div className="h-full overflow-hidden"><LevelTwoBook /></div>;
         if (panel.id === 'ALRT') return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
         if (panel.id === 'NEWS') return <div className="h-full overflow-hidden"><NewsTerminal /></div>;
         return null;
@@ -361,8 +375,16 @@ export function PanelWorkspace({
       {/* COMMAND BAR UPGRADE: Added New Hypothesis and Restore */}
       <div className="flex items-center justify-between px-2 py-1 border-b border-[#1a1a1a] bg-[#050505] z-50">
         <div className="flex items-center gap-2">
-          <NewHypothesisDialog />
-          <div className="h-4 w-px bg-zinc-800 mx-1" />
+          {isAuthenticated ? (
+            <>
+              <NewHypothesisDialog />
+              <div className="h-4 w-px bg-zinc-800 mx-1" />
+            </>
+          ) : (
+            <div className="px-2 py-1 text-[9px] font-black text-zinc-600 border border-dashed border-zinc-800 rounded-sm">
+              READ-ONLY MODE
+            </div>
+          )}
           {closedPanels.length > 0 && (
             <div className="flex items-center gap-1">
               <span className="text-[9px] font-black text-zinc-600 uppercase mr-1">Restore:</span>

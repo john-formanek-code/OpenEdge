@@ -23,38 +23,33 @@ export function AddFeatureForm() {
     <form
       id="feature-form"
       action={handleSubmit}
-      className="flex gap-2 items-center bg-[#0a0a0a] border border-[color:var(--bb-border)] px-2 py-1"
+      className="flex gap-1 items-center bg-black border-l border-zinc-800 px-2 h-full"
     >
-      <div className="flex items-center space-x-2">
-        <label className="sr-only" htmlFor="symbol">Symbol</label>
-        <input
-          id="symbol"
-          name="symbol"
-          placeholder="AAPL"
-          required
-          className="bb-input w-16 h-8 text-[10px]"
-        />
-        <label className="sr-only" htmlFor="name">Feature Name</label>
-        <input
-          id="name"
-          name="name"
-          placeholder="ADX_14"
-          required
-          className="bb-input w-32 h-8 text-[10px]"
-        />
-        <label className="sr-only" htmlFor="value">Value</label>
-        <input
-          id="value"
-          name="value"
-          type="number"
-          step="any"
-          required
-          className="bb-input w-20 h-8 text-[10px]"
-        />
-      </div>
-      <button className="bb-button h-8 px-3">
-        <Plus className="w-4 h-4" />
-        <span className="hidden sm:inline">Store</span>
+      <input
+        id="symbol"
+        name="symbol"
+        placeholder="SYM"
+        required
+        className="bg-black border border-zinc-800 text-[10px] w-12 h-6 px-1 outline-none focus:border-amber-500 uppercase font-mono"
+      />
+      <input
+        id="name"
+        name="name"
+        placeholder="FEATURE_NAME"
+        required
+        className="bg-black border border-zinc-800 text-[10px] w-24 h-6 px-1 outline-none focus:border-amber-500 uppercase font-mono"
+      />
+      <input
+        id="value"
+        name="value"
+        type="number"
+        step="any"
+        required
+        placeholder="VAL"
+        className="bg-black border border-zinc-800 text-[10px] w-16 h-6 px-1 outline-none focus:border-amber-500 font-mono"
+      />
+      <button className="bg-amber-500/10 border border-amber-500/50 text-amber-500 h-6 px-2 text-[9px] font-black hover:bg-amber-500/20 transition-colors uppercase">
+        STORE
       </button>
     </form>
   );

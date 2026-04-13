@@ -1,7 +1,14 @@
 {
   "name": "openedge",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "private": false,
+  "description": "Specialized trading terminal and workflow engine for high-conviction traders.",
+  "author": "john-formanek-code",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/john-formanek-code/OpenEdge.git"
+  },
   "scripts": {
     "dev": "next dev -p 2500",
     "build": "next build",

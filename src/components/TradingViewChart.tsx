@@ -64,7 +64,17 @@ export function TradingViewChart({ symbol, theme = 'dark' }: TradingViewChartPro
           backgroundColor: '#000000',
           gridColor: '#1a1a1a',
           hide_top_toolbar: false,
-          save_image: false,
+          save_image: true,
+          details: true,
+          hotlist: true,
+          calendar: true,
+          show_popup_button: true,
+          popup_width: "1000",
+          popup_height: "650",
+          studies: [
+            "RSI@tv-basicstudies",
+            "MASimple@tv-basicstudies"
+          ],
         });
       }
     };
@@ -112,11 +122,35 @@ const LAYOUTS = [
   { id: '3x2', label: '3x2', type: 'grid', cols: 3, rows: 2 },
   { id: '4x4', label: '4x4', type: 'grid', cols: 4, rows: 4 },
 ];
-
 export function MultiChartGrid({ initialSymbol = 'BTC' }: { initialSymbol?: string }) {
   const { focusedTicker } = useTerminal();
   const [layout, setLayout] = useState(LAYOUTS[0]);
   const [symbols, setSymbols] = useState<string[]>(Array(16).fill(initialSymbol));
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from storage
+  useEffect(() => {
+    const stored = localStorage.getItem('openedge_chart_layout');
+    if (stored) {
+      try {
+        const { layoutId, savedSymbols } = JSON.parse(stored);
+        const l = LAYOUTS.find(x => x.id === layoutId);
+        if (l) setLayout(l);
+        if (savedSymbols) setSymbols(savedSymbols);
+      } catch (e) {}
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save to storage
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('openedge_chart_layout', JSON.stringify({
+        layoutId: layout.id,
+        savedSymbols: symbols
+      }));
+    }
+  }, [layout, symbols, isLoaded]);
 
   // Sync first chart with global focused ticker
   useEffect(() => {
@@ -162,7 +196,23 @@ export function MultiChartGrid({ initialSymbol = 'BTC' }: { initialSymbol?: stri
     <div className="flex flex-col h-full bg-black overflow-hidden">
       {/* Chart Toolbar */}
       <div className="flex items-center justify-between px-2 py-1 border-b border-[#1a1a1a] bg-[#050505] shrink-0">
-        <div className="flex gap-1 overflow-x-auto no-scrollbar">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar items-center">
+          <div className="flex bg-black border border-zinc-800 h-6 px-2 items-center mr-2">
+            <span className="text-[9px] text-zinc-600 mr-2 font-black">SYNC ALL:</span>
+            <input 
+              className="bg-transparent border-0 outline-none text-amber-500 text-[10px] w-20 uppercase font-black"
+              placeholder="SYM..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const sym = (e.target as HTMLInputElement).value.toUpperCase();
+                  if (sym) setSymbols(Array(16).fill(sym));
+                  (e.target as HTMLInputElement).value = '';
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
+          </div>
+          <div className="h-4 w-px bg-zinc-800 mx-1" />
           {LAYOUTS.map((l) => (
             <button
               key={l.id}
