@@ -6,24 +6,36 @@ import { hypotheses, activityLogs, marketStates, tradePlans, executions, strateg
 import { eq, desc, or, lt, gte, and, like } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { hypothesisSchema, activityLogSchema, marketStateSchema } from '@/lib/validators';
+import { getSession } from '@/lib/auth';
+
+async function ensureAuth() {
+  const session = await getSession();
+  if (!session) {
+    throw new Error("Unauthorized: Administrative access required.");
+  }
+  return session;
+}
 
 export async function getStrategies() {
   return await db.select().from(strategies);
 }
 
 export async function createStrategy(data: any) {
+  await ensureAuth();
   const result = await db.insert(strategies).values(data).returning();
   revalidatePath('/lab');
   return result[0];
 }
 
 export async function addMarketFeature(data: any) {
+  await ensureAuth();
   const result = await db.insert(marketFeatures).values({ ...data, timestamp: new Date() }).returning();
   revalidatePath('/lab');
   return result[0];
 }
 
 export async function createBacktest(data: any) {
+  await ensureAuth();
   const result = await db.insert(backtests).values({ ...data, status: 'pending', createdAt: new Date() }).returning();
   revalidatePath('/lab');
   return result[0];
@@ -44,6 +56,7 @@ export async function getTradePlan(hypothesisId: string) {
 }
 
 export async function saveTradePlan(hypothesisId: string, planData: any) {
+  await ensureAuth();
   const existing = await getTradePlan(hypothesisId);
   if (existing) {
     await db.update(tradePlans).set(planData).where(eq(tradePlans.id, existing.id));
@@ -92,12 +105,14 @@ export async function getPortfolioRiskSummary() {
 }
 
 export async function addExecution(data: any) {
+  await ensureAuth();
   const result = await db.insert(executions).values(data).returning();
   revalidatePath(`/hypothesis/${data.hypothesisId}`);
   return result[0];
 }
 
 export async function updateMarketState(data: any) {
+  await ensureAuth();
   const validated = marketStateSchema.parse(data);
   const result = await db.insert(marketStates).values(validated).returning();
   revalidatePath('/');
@@ -137,6 +152,7 @@ export async function getHypotheses(filter: any = 'active', search?: string, ass
 }
 
 export async function createHypothesis(data: any) {
+  await ensureAuth();
   const validated = hypothesisSchema.parse(data);
   const result = await db.insert(hypotheses).values(validated).returning();
   revalidatePath('/');
@@ -144,6 +160,7 @@ export async function createHypothesis(data: any) {
 }
 
 export async function updateHypothesis(id: string, data: any) {
+  await ensureAuth();
   const validated = hypothesisSchema.partial().parse(data);
   const result = await db.update(hypotheses).set(validated).where(eq(hypotheses.id, id)).returning();
   revalidatePath('/');
@@ -151,6 +168,7 @@ export async function updateHypothesis(id: string, data: any) {
 }
 
 export async function addActivityLog(hypothesisId: string, type: string, content: string) {
+  await ensureAuth();
   const validated = activityLogSchema.parse({ type, content });
   const result = await db.insert(activityLogs).values({ hypothesisId, ...validated }).returning();
   revalidatePath('/');
@@ -158,6 +176,7 @@ export async function addActivityLog(hypothesisId: string, type: string, content
 }
 
 export async function updateHypothesisState(id: string, newState: string, reason: string) {
+  await ensureAuth();
   const h = await db.select().from(hypotheses).where(eq(hypotheses.id, id)).get();
   if (!h) return;
   await db.update(hypotheses).set({ state: newState }).where(eq(hypotheses.id, id));
@@ -271,14 +290,14 @@ export async function getBehavioralStats() {
   };
 }
 
-
-
 export async function logViolation(data: any) {
+  await ensureAuth();
   await db.insert(ruleViolations).values(data);
   revalidatePath('/');
 }
 
 export async function addEquitySnapshot(balance: number, drawdown: number) {
+  await ensureAuth();
   await db.insert(equitySnapshots).values({
     balance,
     drawdown,
