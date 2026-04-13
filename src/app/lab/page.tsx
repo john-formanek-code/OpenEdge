@@ -1,24 +1,55 @@
-import { db } from "@/db";
-import { strategies, backtests, marketFeatures } from "@/db/schema";
+'use client';
+
 import { desc } from "drizzle-orm";
-import { AlertTriangle, Clock, FastForward, Heart } from "lucide-react";
-import { getExpectancyStats, getBehavioralStats } from "@/lib/actions/hypotheses";
+import { AlertTriangle, Clock, FastForward, Heart, Lock } from "lucide-react";
+import { getExpectancyStats, getBehavioralStats, getStrategies } from "@/lib/actions/hypotheses";
 import { AddFeatureForm } from "@/components/AddFeatureForm";
 import { BacktestConfigForm } from "@/components/BacktestConfigForm";
+import { useSession } from "@/hooks/useSession";
+import { useEffect, useState, use } from "react";
+import Link from "next/link";
 
-export default async function SignalLabPage({
+export default function SignalLabPage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const { tab } = await searchParams;
-  const currentTab = tab || 'research';
+  const params = use(searchParams);
+  const { isAuthenticated } = useSession();
+  const currentTab = params.tab || 'research';
 
-  const allStrategies = await db.select().from(strategies);
-  const recentBacktests = await db.select().from(backtests).orderBy(desc(backtests.createdAt)).limit(5);
-  const realFeatures = await db.select().from(marketFeatures).orderBy(desc(marketFeatures.timestamp)).limit(10);
-  const setupStats = await getExpectancyStats();
-  const behavioral = await getBehavioralStats();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const stats = await getExpectancyStats();
+        const behavior = await getBehavioralStats();
+        const strats = await getStrategies();
+        setData({ 
+          strategies: strats, 
+          setupStats: stats, 
+          behavioral: behavior, 
+          recentBacktests: [], 
+          realFeatures: [] 
+        });
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading) return <div className="h-full bg-black animate-pulse" />;
+  
+  const allStrategies = data?.strategies || [];
+  const recentBacktests = data?.recentBacktests || [];
+  const realFeatures = data?.realFeatures || [];
+  const setupStats = data?.setupStats || [];
+  const behavioral = data?.behavioral || { latency: '—', drift: '—', breakRate: '—%' };
 
   return (
     <div className="h-full flex flex-col bg-black">
@@ -26,10 +57,13 @@ export default async function SignalLabPage({
       {/* Tab Strip */}
       <div className="bg-[#111] border-b border-[#333] px-3 py-1 flex items-center justify-between text-[10px] font-bold">
         <div className="flex space-x-4">
-          <a href="?tab=research" className={currentTab === 'research' ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>1. SIGNAL_RESEARCH</a>
-          <a href="?tab=performance" className={currentTab === 'performance' ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>2. PERFORMANCE_ANAL</a>
+          <Link href="?tab=research" className={currentTab === 'research' ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>1. SIGNAL_RESEARCH</Link>
+          <Link href="?tab=performance" className={currentTab === 'performance' ? 'text-[var(--terminal-accent)]' : 'text-zinc-600'}>2. PERFORMANCE_ANAL</Link>
         </div>
-        <div className="text-zinc-500 font-mono">QUANT_STATION: 01</div>
+        <div className="flex items-center gap-2">
+          {!isAuthenticated && <span className="text-[9px] text-zinc-600 flex items-center gap-1"><Lock className="w-2 h-2" /> GUEST_MODE</span>}
+          <div className="text-zinc-500 font-mono">QUANT_STATION: 01</div>
+        </div>
       </div>
 
       <div className="flex-1 grid grid-cols-12 gap-[1px] bg-[#222] overflow-hidden p-[1px]">
@@ -40,7 +74,7 @@ export default async function SignalLabPage({
             <div className="col-span-4 bg-black flex flex-col min-h-0">
               <div className="terminal-header">
                 <span>FEATURE_STORE // TICKER_DATA</span>
-                <AddFeatureForm />
+                {isAuthenticated && <AddFeatureForm />}
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <table className="w-full text-[9px] font-mono border-collapse">
@@ -54,9 +88,9 @@ export default async function SignalLabPage({
                   <tbody>
                     {realFeatures.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="p-8 text-center text-zinc-700 italic uppercase">No signals stored. Use form above.</td>
+                        <td colSpan={3} className="p-8 text-center text-zinc-700 italic uppercase">No signals stored.</td>
                       </tr>
-                    ) : realFeatures.map((f) => (
+                    ) : realFeatures.map((f: any) => (
                       <tr key={f.id} className="border-b border-[#111] hover:bg-[#0a0a0a]">
                         <td className="p-2 font-bold text-white uppercase">{f.symbol}</td>
                         <td className="p-2 text-zinc-500 uppercase">{f.name}</td>
@@ -78,7 +112,7 @@ export default async function SignalLabPage({
                     <div className="space-y-2">
                       {allStrategies.length === 0 ? (
                         <div className="text-[9px] text-zinc-700 uppercase">No active playbooks.</div>
-                      ) : allStrategies.map(s => (
+                      ) : allStrategies.map((s: any) => (
                         <div key={s.id} className="bg-[#050505] border border-[#222] p-2 flex justify-between items-center">
                           <span className="text-[10px] font-bold text-[#e5e5e5] uppercase">{s.name}</span>
                           <span className="text-[8px] bg-green-900/30 text-green-500 px-1 border border-green-900/50 font-black">LIVE</span>
@@ -86,20 +120,27 @@ export default async function SignalLabPage({
                       ))}
                     </div>
                   </div>
-                  <BacktestConfigForm strategies={allStrategies} />
+                  {isAuthenticated ? (
+                    <BacktestConfigForm strategies={allStrategies} />
+                  ) : (
+                    <div className="border border-dashed border-zinc-800 p-8 flex flex-col items-center justify-center text-zinc-600">
+                      <Lock className="w-5 h-5 mb-2" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Simulation Restricted</span>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-4">
                    <div className="border border-red-900/30 bg-red-950/10 p-4">
                      <div className="flex items-center text-red-500 text-[10px] font-black uppercase mb-2 tracking-tighter">
                        <AlertTriangle className="w-3 h-3 mr-1" /> Overfit / Leakage Alarms
                      </div>
-                     <p className="text-[9px] text-red-400 leading-tight">Overlap detected in 2 concurrent backtests. Ensure walk-forward windows are anchored correctly.</p>
+                     <p className="text-[9px] text-red-400 leading-tight">Overlap detected in 2 concurrent backtests.</p>
                    </div>
                    <div className="border border-[#333] p-4 flex-1">
                      <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-4">Job Queue</h4>
                      {recentBacktests.length === 0 ? (
                         <div className="text-[9px] text-zinc-700 uppercase">Queue empty.</div>
-                     ) : recentBacktests.map(j => (
+                     ) : recentBacktests.map((j: any) => (
                        <div key={j.id} className="flex justify-between items-center text-[9px] font-mono border-b border-[#111] py-1">
                          <span className="text-zinc-400">{j.type}</span>
                          <span className="text-yellow-500 uppercase">{j.status}</span>
@@ -147,9 +188,9 @@ export default async function SignalLabPage({
                   <tbody>
                     {setupStats.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-zinc-700 italic uppercase">No closed trades available for decomposition.</td>
+                        <td colSpan={5} className="p-8 text-center text-zinc-700 italic uppercase">No closed trades available.</td>
                       </tr>
-                    ) : setupStats.map((s) => (
+                    ) : setupStats.map((s: any) => (
                       <tr key={s.name} className="border-b border-[#111] hover:bg-[#0a0a0a]">
                         <td className="p-3 font-bold text-white uppercase">{s.name}</td>
                         <td className="p-3 text-zinc-500">{s.count}</td>

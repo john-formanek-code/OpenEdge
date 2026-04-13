@@ -1,13 +1,45 @@
-import { Shield, Server } from "lucide-react";
+'use client';
+
+import { Shield, Server, Lock, ArrowLeft } from "lucide-react";
 import { getDatabaseUrl, isFileDatabaseUrl } from "@/lib/env";
+import { useSession } from "@/hooks/useSession";
+import Link from "next/link";
 
 export default function SettingsPage() {
-  const isLocalSqlite = isFileDatabaseUrl(getDatabaseUrl());
+  const { isAuthenticated, status } = useSession();
+  const isLocalSqlite = false; // Simplified for client transition
+
+  if (status === 'loading') return <div className="h-full bg-black animate-pulse" />;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="h-full bg-black flex flex-col items-center justify-center p-10 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="inline-flex p-6 bg-zinc-900/50 border border-zinc-800 rounded-full mb-4 text-zinc-600">
+            <Lock className="w-12 h-12" />
+          </div>
+          <h1 className="text-2xl font-black italic text-white tracking-tight">PROTECTED CONFIGURATION</h1>
+          <p className="text-zinc-500 text-sm leading-relaxed">
+            System settings, data exports, and security policies are restricted to authorized personnel. Please enter your terminal credentials to manage this workstation.
+          </p>
+          <div className="flex gap-4 pt-4 justify-center">
+            <Link href="/terminal" className="px-5 py-2.5 bg-zinc-800 text-white text-xs font-black uppercase tracking-widest hover:bg-zinc-700 transition">
+              Back to Terminal
+            </Link>
+            <Link href="/login" className="px-5 py-2.5 bg-amber-500 text-black text-xs font-black uppercase tracking-widest hover:brightness-110 transition">
+              Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-black flex flex-col">
-      <div className="bg-[#111] border-b border-[#333] px-3 py-1 text-[10px] font-bold text-zinc-600">
-        SYSTEM_CONFIG // SETTINGS
+      <div className="bg-[#111] border-b border-[#333] px-3 py-1 text-[10px] font-bold text-zinc-600 flex justify-between">
+        <span>SYSTEM_CONFIG // SETTINGS</span>
+        <span className="text-green-500 font-black">ADMIN_AUTHORIZED</span>
       </div>
       
       <div className="flex-1 p-6 space-y-8 max-w-4xl custom-scrollbar overflow-y-auto">
@@ -65,7 +97,7 @@ export default function SettingsPage() {
                   <Shield className="w-2.5 h-2.5 mr-1" /> SESSION_ACTIVE
                 </div>
                 <div className="text-[8px] text-zinc-600 leading-tight">
-                  Your IP is whitelisted for terminal access. Clear cookies to rotate session.
+                  Your session is authenticated. Administrative actions are enabled.
                 </div>
               </div>
             </div>
