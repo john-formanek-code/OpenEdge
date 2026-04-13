@@ -82,12 +82,12 @@ export function TradingViewChart({ symbol, theme = 'dark' }: TradingViewChartPro
   }, [symbol, theme]);
 
   // Unique ID for each widget instance in the grid
-  const id = useRef(`tv-widget-${Math.random().toString(36).substr(2, 9)}`);
+  const [chartId] = useState(() => `tv-widget-${Math.random().toString(36).substr(2, 9)}`);
 
   return (
     <div className="w-full h-full bg-black">
       <div 
-        id={id.current} 
+        id={chartId} 
         ref={containerRef} 
         className="w-full h-full"
       />

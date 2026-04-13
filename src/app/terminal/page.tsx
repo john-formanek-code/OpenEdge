@@ -2,6 +2,7 @@ import { getHypotheses, getPortfolioRiskSummary, getMarketEvents, getEquitySumma
 import { PanelWorkspace, type Hypothesis, type RiskSummary, type MarketEvent, type MarketStateSummary } from "@/components/PanelWorkspace";
 import { LiveQuoteStrip } from "@/components/LiveQuoteStrip";
 import { FunctionKey } from "@/components/FunctionKey";
+import Link from "next/link";
 
 export default async function TerminalPage({
   searchParams,

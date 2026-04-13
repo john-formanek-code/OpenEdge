@@ -24,8 +24,6 @@ export function LevelTwoBook({ symbol }: { symbol?: string }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    
     async function fetchBook() {
       try {
         const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${binanceSymbol}&limit=20`);

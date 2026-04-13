@@ -22,6 +22,7 @@ export function SurvivalPanel({ currentDD = 0, historyR = [] }: { currentDD?: nu
       let pathReturn = 0;
       for (let t = 0; t < trades; t++) {
         // Randomly sample from history
+        // eslint-disable-next-line react-hooks/purity
         const sample = historyR[Math.floor(Math.random() * historyR.length)];
         pathReturn += sample;
       }
