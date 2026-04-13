@@ -1,9 +1,6 @@
 'use client';
 
 import { getHypothesisById, getTradePlan, getAssetClassExposure, getAuditTrail } from "@/lib/actions/hypotheses";
-import { db as mainDb } from "@/db";
-import { executions as executionsTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,9 +22,9 @@ export default function HypothesisPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = use(params);
-  const { tab } = use(searchParams);
+  const search = use(searchParams);
   const { isAuthenticated } = useSession();
-  const currentTab = tab || 'oms';
+  const currentTab = search.tab || 'oms';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

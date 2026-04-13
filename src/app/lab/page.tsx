@@ -1,6 +1,5 @@
 'use client';
 
-import { desc } from "drizzle-orm";
 import { AlertTriangle, Clock, FastForward, Heart, Lock } from "lucide-react";
 import { getExpectancyStats, getBehavioralStats, getStrategies } from "@/lib/actions/hypotheses";
 import { AddFeatureForm } from "@/components/AddFeatureForm";

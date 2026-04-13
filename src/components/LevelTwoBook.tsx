@@ -41,7 +41,7 @@ export function LevelTwoBook({ symbol }: { symbol?: string }) {
     }
 
     fetchBook();
-    intervalId = setInterval(fetchBook, 2000); // 2s refresh for L2
+    const intervalId = setInterval(fetchBook, 2000); // 2s refresh for L2
     return () => clearInterval(intervalId);
   }, [binanceSymbol]);
 

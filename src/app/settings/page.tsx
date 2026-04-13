@@ -1,7 +1,6 @@
 'use client';
 
-import { Shield, Server, Lock, ArrowLeft } from "lucide-react";
-import { getDatabaseUrl, isFileDatabaseUrl } from "@/lib/env";
+import { Shield, Server, Lock } from "lucide-react";
 import { useSession } from "@/hooks/useSession";
 import Link from "next/link";
 
