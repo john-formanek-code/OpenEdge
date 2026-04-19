@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, LayoutDashboard, Inbox, Archive, BarChart3, Settings, FlaskConical, Receipt } from 'lucide-react';
+import { Home, LayoutDashboard, Inbox, Archive, BarChart3, Settings, FlaskConical, Receipt, AppWindow } from 'lucide-react';
 
 const navItems = [
   { name: 'Today Focus', href: '/terminal?view=today', icon: Home },
@@ -9,6 +9,7 @@ const navItems = [
   { name: 'Archive', href: '/terminal?view=archive', icon: Archive },
   { name: 'Signal Lab', href: '/lab', icon: FlaskConical },
   { name: 'Market State', href: '/market', icon: BarChart3 },
+  { name: 'App Hub', href: '/hub', icon: AppWindow },
 ];
 
 export function Sidebar() {

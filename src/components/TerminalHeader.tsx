@@ -97,6 +97,7 @@ export function TerminalHeader() {
       case 'LAB': router.push('/lab'); break;
       case 'JRNL': router.push('/blotter?view=journal'); break;
       case 'WATCH': router.push('/watch'); break;
+      case 'HUB': router.push('/hub'); break;
       case 'HEAT': router.push('/terminal?search=HEAT'); break;
       case 'TOP': router.push('/terminal?search=TOP'); break;
       case 'CURV': router.push('/terminal?search=CURV'); break;
