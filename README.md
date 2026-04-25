@@ -1,5 +1,7 @@
 # OpenEdge
 
+> 🚀 **Live Demo:** Try the application right now at [https://openedge.vercel.app/](https://openedge.vercel.app/)
+
 **OpenEdge** is a specialized trading terminal and workflow engine designed for high-conviction traders and small teams. It bridges the gap between raw market data and disciplined trade execution, focusing on hypothesis tracking, rule enforcement, and execution analysis.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://openedge.vercel.app/)
