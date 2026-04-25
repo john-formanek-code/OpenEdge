@@ -58,6 +58,7 @@ export default async function TerminalPage({
           { key: "F10", label: "Curve", href: "/terminal?search=CURV", active: false, panelId: "CURV" },
           { key: "F11", label: "Heatmap", href: "/terminal?search=HEAT", active: false, panelId: "HEAT" },
           { key: "F12", label: "Alerts", href: "/terminal?search=ALRT", active: false, panelId: "ALRT" },
+          { key: "HUB", label: "App Hub", href: "/hub", active: false, panelId: "HUB" },
         ].map((item) => (
           <FunctionKey key={item.key} item={item} />
         ))}
