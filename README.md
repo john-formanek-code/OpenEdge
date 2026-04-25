@@ -2,7 +2,7 @@
 
 **OpenEdge** is a specialized trading terminal and workflow engine designed for high-conviction traders and small teams. It bridges the gap between raw market data and disciplined trade execution, focusing on hypothesis tracking, rule enforcement, and execution analysis.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://open-edge-phi.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://openedge.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
