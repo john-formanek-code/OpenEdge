@@ -39,7 +39,7 @@ export type RiskSummary = { clusters: Cluster[]; stops: StopLevel[] };
 export type MarketEvent = { id: string; name: string; impact: string; startTime: string | Date };
 export type Equity = { balance: number; drawdown: number };
 export type MarketStateSummary = { regime: string; vixProxy: number; biasSummary: string };
-type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS' | 'TOP' | 'CURV' | 'HEAT' | 'POSB' | 'OFLOW' | 'ALRT';
+type FunctionId = 'WATCH' | 'RISK' | 'NEWS' | 'WATCHLIST' | 'WEI' | 'ECO' | 'CHARTS' | 'TOP' | 'CURV' | 'HEAT' | 'POSB' | 'OFLOW' | 'ALRT' | 'HUB';
 
 const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: boolean; related: FunctionId[] }> = {
   WATCH: { label: 'Monitor', related: ['RISK', 'NEWS'] },
@@ -55,6 +55,7 @@ const FUNCTION_REGISTRY: Record<FunctionId, { label: string; requiresContext?: b
   POSB: { label: 'Position Builder', related: ['RISK'] },
   OFLOW: { label: 'Options Flow', related: ['CHARTS'] },
   ALRT: { label: 'Alert Center', related: ['NEWS'] },
+  HUB: { label: 'App Hub', related: ['WATCH'] },
 };
 
 const INITIAL_WORKSPACE_PANELS: WorkspacePanelState[] = [
@@ -238,6 +239,7 @@ function NewsPanel({ events, marketState }: { events: MarketEvent[]; marketState
 }
 
 import { useSession } from '@/hooks/useSession';
+import HubPage from '@/app/hub/page';
 
 export function PanelWorkspace({
   watchlist,
@@ -350,6 +352,8 @@ export function PanelWorkspace({
         return <div className="h-full overflow-hidden"><LevelTwoBook symbol={panelSecurities[panel.id]} /></div>;
       case 'ALRT':
         return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
+      case 'HUB':
+        return <div className="h-full overflow-hidden relative scale-[0.85] origin-top-left w-[117.65%] h-[117.65%]"><HubPage /></div>;
       default:
         // Handle cases where panel.id might be the title or something else from drag
         if (panel.id === 'WATCHLIST') return <div className="h-full overflow-hidden"><WatchlistBoard /></div>;
@@ -364,6 +368,7 @@ export function PanelWorkspace({
         if (panel.id === 'L2') return <div className="h-full overflow-hidden"><LevelTwoBook /></div>;
         if (panel.id === 'ALRT') return <div className="h-full overflow-hidden"><NotificationCenter /></div>;
         if (panel.id === 'NEWS') return <div className="h-full overflow-hidden"><NewsTerminal /></div>;
+        if (panel.id === 'HUB') return <div className="h-full overflow-hidden relative scale-[0.85] origin-top-left w-[117.65%] h-[117.65%]"><HubPage /></div>;
         return null;
     }
   };
